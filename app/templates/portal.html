@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }} | {{ app_name }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body data-page="{{ page_mode }}">
+    <div class="sky-stage" aria-hidden="true">
+        <div class="sky-gradient"></div>
+        <div class="cloud cloud-one"></div>
+        <div class="cloud cloud-two"></div>
+        <div class="cloud cloud-three"></div>
+        <div class="route-glow"></div>
+        <div class="scroll-plane" id="scroll-plane">
+            <div class="plane-trail"></div>
+            <img src="/static/img/plane.svg" alt="" />
+        </div>
+    </div>
+
+    <div class="page-shell">
+        <header class="topbar">
+            <a class="brand" href="{{ '/admin' if page_mode == 'admin' else '/app' }}">
+                <span class="brand-mark">AC</span>
+                <span>{{ app_name }}</span>
+            </a>
+            <nav class="nav-links">
+                <a href="/">Landing</a>
+                {% if page_mode == 'user' %}
+                <a href="/app">Mi panel</a>
+                {% endif %}
+                {% if is_admin %}
+                <a href="/admin">Admin</a>
+                {% endif %}
+            </nav>
+            <div class="nav-actions">
+                <button class="ghost-btn" id="logout-btn">Salir</button>
+            </div>
+        </header>
+
+        <main>
+            <section class="portal-hero" data-reveal>
+                <div>
+                    <span class="eyebrow">{{ 'Consola admin' if page_mode == 'admin' else 'Portal privado' }}</span>
+                    <h1>{{ 'Entrena y supervisa la base documental del agente.' if page_mode == 'admin' else 'Gestiona tus incidencias y conversa con el agente.' }}</h1>
+                    <p>
+                        {% if page_mode == 'admin' %}
+                        Carga documentos, OCRiza, indexa y deja la memoria del sistema lista para responder mejor.
+                        {% else %}
+                        Crea expedientes, revisa el estado de cada caso y obtiene apoyo del agente en tiempo real.
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="panel-note">
+                    <strong id="portal-user-name">{{ current_user.full_name }}</strong>
+                    <span id="portal-user-email">{{ current_user.email }}</span>
+                    <span id="portal-user-role">{{ current_user.role }}</span>
+                </div>
+            </section>
+
+            {% if page_mode == 'user' %}
+            <section class="dashboard-section">
+                <div class="dashboard-grid">
+                    <aside class="dashboard-panel profile-panel" data-reveal>
+                        <div class="panel-header">
+                            <h3>Cuenta</h3>
+                        </div>
+                        <div id="user-card" class="user-card"></div>
+                        <div class="panel-note">
+                            <strong>Acceso protegido:</strong>
+                            <span>Esta ruta existe solo para usuarios autenticados.</span>
+                        </div>
+                    </aside>
+
+                    <section class="dashboard-panel" data-reveal>
+                        <div class="panel-header">
+                            <h3>Nueva incidencia</h3>
+                        </div>
+                        <form id="incident-form" class="stack-form">
+                            <div class="form-row">
+                                <label>
+                                    <span>Vuelo</span>
+                                    <input name="flight_number" placeholder="IB3166" required>
+                                </label>
+                                <label>
+                                    <span>Aerolínea</span>
+                                    <input name="airline" placeholder="Iberia" required>
+                                </label>
+                            </div>
+                            <label>
+                                <span>Resumen del incidente</span>
+                                <textarea name="summary" rows="4" placeholder="Describe retraso, cancelación o problema de equipaje" required></textarea>
+                            </label>
+                            <label>
+                                <span>Compensación estimada</span>
+                                <input name="claim_amount" type="number" min="0" step="10" value="250">
+                            </label>
+                            <button class="primary-btn" type="submit">Crear expediente</button>
+                        </form>
+                    </section>
+
+                    <section class="dashboard-panel span-two" data-reveal>
+                        <div class="panel-header">
+                            <h3>Incidencias</h3>
+                        </div>
+                        <div id="incidents-list" class="incident-list"></div>
+                    </section>
+
+                    <section class="dashboard-panel span-two" data-reveal>
+                        <div class="panel-header">
+                            <h3>Chat del agente</h3>
+                            <span id="chat-context">Selecciona una incidencia</span>
+                        </div>
+                        <div id="chat-thread" class="chat-thread"></div>
+                        <form id="chat-form" class="chat-form">
+                            <textarea name="message" rows="3" placeholder="Pide al agente un borrador, checklist o siguiente paso" required></textarea>
+                            <button class="primary-btn" type="submit">Enviar al agente</button>
+                        </form>
+                    </section>
+                </div>
+            </section>
+            {% else %}
+            <section class="dashboard-section">
+                <div class="dashboard-grid">
+                    <aside class="dashboard-panel profile-panel" data-reveal>
+                        <div class="panel-header">
+                            <h3>Administrador</h3>
+                        </div>
+                        <div id="user-card" class="user-card"></div>
+                        <div class="panel-note">
+                            <strong>Ruta admin:</strong>
+                            <span>Solo accesible para usuarios con rol administrativo.</span>
+                        </div>
+                    </aside>
+
+                    <section class="dashboard-panel" data-reveal>
+                        <div class="panel-header">
+                            <h3>Documentos para el modelo</h3>
+                        </div>
+                        <form id="docs-form" class="stack-form">
+                            <label class="file-drop">
+                                <input id="docs-input" name="files" type="file" multiple>
+                                <span>Selecciona documentos para OCR e indexación del RAG</span>
+                            </label>
+                            <button class="primary-btn" type="submit">Ingresar al modelo</button>
+                        </form>
+                    </section>
+
+                    <section class="dashboard-panel" data-reveal>
+                        <div class="panel-header">
+                            <h3>Resumen del sistema</h3>
+                        </div>
+                        <div class="stats-grid portal-stats" id="stats-grid">
+                            <article class="stat-card">
+                                <span>Usuarios</span>
+                                <strong data-stat="users">--</strong>
+                            </article>
+                            <article class="stat-card">
+                                <span>Incidencias</span>
+                                <strong data-stat="incidents">--</strong>
+                            </article>
+                            <article class="stat-card">
+                                <span>Documentos</span>
+                                <strong data-stat="knowledge_docs">--</strong>
+                            </article>
+                            <article class="stat-card">
+                                <span>Tasa de éxito</span>
+                                <strong data-stat="success_rate">--</strong>
+                            </article>
+                        </div>
+                    </section>
+
+                    <section class="dashboard-panel span-two" data-reveal>
+                        <div class="panel-header">
+                            <h3>Base documental indexada</h3>
+                        </div>
+                        <div id="docs-list" class="document-admin-list"></div>
+                    </section>
+
+                    <section class="dashboard-panel span-two" data-reveal>
+                        <div class="panel-header">
+                            <h3>Control del documento</h3>
+                        </div>
+                        <form id="doc-detail-form" class="stack-form">
+                            <input type="hidden" id="doc-id" name="doc_id">
+                            <label>
+                                <span>Nombre visible</span>
+                                <input id="doc-filename" name="filename" placeholder="Selecciona un documento">
+                            </label>
+                            <label>
+                                <span>Origen</span>
+                                <input id="doc-source-kind" name="source_kind" placeholder="admin_upload">
+                            </label>
+                            <div class="toggle-row">
+                                <label class="toggle-item">
+                                    <span>Disponible para el RAG</span>
+                                    <input id="doc-active" name="is_active" type="checkbox">
+                                </label>
+                                <label class="toggle-item">
+                                    <span>Indexado en búsqueda</span>
+                                    <input id="doc-indexed" name="indexed" type="checkbox">
+                                </label>
+                            </div>
+                            <div id="doc-meta" class="panel-note">
+                                <span>Selecciona un documento para ver tamaño, blob y extracto.</span>
+                            </div>
+                            <div class="admin-actions">
+                                <button class="primary-btn" type="submit">Guardar cambios</button>
+                                <button class="ghost-btn danger-btn" type="button" id="delete-doc-btn">Eliminar archivo</button>
+                            </div>
+                        </form>
+                    </section>
+                </div>
+            </section>
+            {% endif %}
+        </main>
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
+    <script src="/static/js/portal.js"></script>
+</body>
+</html>

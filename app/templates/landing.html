@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ app_name }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body data-page="landing">
+    <div class="sky-stage" aria-hidden="true">
+        <div class="sky-gradient"></div>
+        <div class="cloud cloud-one"></div>
+        <div class="cloud cloud-two"></div>
+        <div class="cloud cloud-three"></div>
+        <div class="route-glow"></div>
+        <div class="scroll-plane" id="scroll-plane">
+            <div class="plane-trail"></div>
+            <img src="/static/img/plane.svg" alt="" />
+        </div>
+    </div>
+
+    <div class="page-shell">
+        <header class="topbar">
+            <a class="brand" href="#hero">
+                <span class="brand-mark">AC</span>
+                <span>{{ app_name }}</span>
+            </a>
+            <nav class="nav-links">
+                <a href="#services">Servicios</a>
+                <a href="#results">Casos de exito</a>
+                <a href="#collaborators">Colaboradores</a>
+            </nav>
+            <div class="nav-actions">
+                {% if is_authenticated %}
+                <a class="ghost-btn" href="{{ '/admin' if is_admin else '/app' }}">Ir a mi portal</a>
+                {% else %}
+                <a class="ghost-btn" href="/login">Crear cuenta</a>
+                <a class="primary-btn" href="/login">Entrar</a>
+                {% endif %}
+            </div>
+        </header>
+
+        <main>
+            <section id="hero" class="hero-section">
+                <div class="hero-copy">
+                    <span class="eyebrow">IA generativa + RAG + automatizacion documental</span>
+                    <h1>Reclamaciones aereas con un agente que entiende el caso y te ayuda a cerrarlo.</h1>
+                    <p>
+                        Convierte retrasos, cancelaciones y problemas de equipaje en expedientes trazables,
+                        documentados y listos para reclamar con apoyo de OCR, almacenamiento, busqueda semantica y chat.
+                    </p>
+                    <div class="hero-actions">
+                        <a class="primary-btn large" href="/login">Acceder al portal</a>
+                        <a class="secondary-link" href="#services">Explorar plataforma</a>
+                    </div>
+                    <div class="hero-trust">
+                        <span>JWT + middleware</span>
+                        <span>Portal privado por roles</span>
+                        <span>Admin para conocimiento y RAG</span>
+                    </div>
+
+                    <div class="hero-mini-rail" data-reveal>
+                        <article class="mini-rail-item">
+                            <strong>Usuarios autenticados</strong>
+                            <span>Rutas privadas para expedientes, conversaciones y seguimiento del caso.</span>
+                        </article>
+                        <article class="mini-rail-item">
+                            <strong>Consola admin</strong>
+                            <span>Ingesta documental controlada para OCR, indexacion y memoria del sistema.</span>
+                        </article>
+                    </div>
+                </div>
+
+                <div class="hero-slider" aria-label="Escenas de aerolineas" data-reveal>
+                    <div class="slider-aura"></div>
+                    <div class="slides-track">
+                        <article class="slide slide-amber">
+                            <div class="slide-scene scene-one"></div>
+                            <div class="slide-content">
+                                <span class="slide-label">Retrasos y cancelaciones</span>
+                                <strong>Diagnostico rapido de elegibilidad</strong>
+                                <p>Clasifica incidentes y propone el siguiente paso legal y operativo.</p>
+                            </div>
+                        </article>
+                        <article class="slide slide-mint">
+                            <div class="slide-scene scene-two"></div>
+                            <div class="slide-content">
+                                <span class="slide-label">OCR + Evidencias</span>
+                                <strong>Sube tarjetas, emails y facturas</strong>
+                                <p>Extrae texto de documentos y los deja listos para consulta del agente.</p>
+                            </div>
+                        </article>
+                        <article class="slide slide-coral">
+                            <div class="slide-scene scene-three"></div>
+                            <div class="slide-content">
+                                <span class="slide-label">RAG aplicado</span>
+                                <strong>Respuestas con memoria documental</strong>
+                                <p>El chat combina el contexto del incidente con la base documental indexada.</p>
+                            </div>
+                        </article>
+                    </div>
+                    <div class="slider-badges">
+                        <span>Protected app</span>
+                        <span>Role-based admin</span>
+                        <span>Live stats</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="stats-band" data-reveal>
+                <div class="stats-grid" id="stats-grid">
+                    <article class="stat-card">
+                        <span>Usuarios activos</span>
+                        <strong data-stat="users">--</strong>
+                    </article>
+                    <article class="stat-card">
+                        <span>Incidencias gestionadas</span>
+                        <strong data-stat="incidents">--</strong>
+                    </article>
+                    <article class="stat-card">
+                        <span>Documentos indexados</span>
+                        <strong data-stat="knowledge_docs">--</strong>
+                    </article>
+                    <article class="stat-card">
+                        <span>Tasa de exito</span>
+                        <strong data-stat="success_rate">--</strong>
+                    </article>
+                </div>
+            </section>
+
+            <section id="services" class="content-section">
+                <div class="section-heading">
+                    <span class="eyebrow">Servicios ofrecidos</span>
+                    <h2>Todo el circuito, desde la evidencia hasta el borrador final.</h2>
+                </div>
+                <div class="services-grid">
+                    <article class="feature-card" data-reveal>
+                        <h3>OCR documental</h3>
+                        <p>Extrae texto de justificantes, correos, tarjetas de embarque y pruebas operativas.</p>
+                    </article>
+                    <article class="feature-card" data-reveal>
+                        <h3>RAG con AI Search</h3>
+                        <p>Indexa la base documental y recupera contexto relevante para cada consulta.</p>
+                    </article>
+                    <article class="feature-card" data-reveal>
+                        <h3>Agente de reclamacion</h3>
+                        <p>Chat orientado a accion con borradores de reclamacion y checklist de faltantes.</p>
+                    </article>
+                    <article class="feature-card" data-reveal>
+                        <h3>Middleware de acceso</h3>
+                        <p>Separa la experiencia publica, el portal privado y la consola admin sin mezclar flujos.</p>
+                    </article>
+                </div>
+            </section>
+
+            <section id="results" class="content-section alternate">
+                <div class="section-heading">
+                    <span class="eyebrow">Casos de exito</span>
+                    <h2>Historias preparadas para transmitir confianza y foco operativo.</h2>
+                </div>
+                <div class="case-grid">
+                    <article class="case-card" data-reveal>
+                        <span class="case-amount">250 EUR</span>
+                        <h3>Retraso de 4h en ruta Madrid - Londres</h3>
+                        <p>El agente consolidó normativa, gastos y cronología para generar una reclamación EU261 lista para enviar.</p>
+                    </article>
+                    <article class="case-card" data-reveal>
+                        <span class="case-amount">420 EUR</span>
+                        <h3>Equipaje extraviado y gastos esenciales</h3>
+                        <p>Se detectaron tickets clave, se agrupó evidencia y se dejó un borrador listo para seguimiento.</p>
+                    </article>
+                    <article class="case-card" data-reveal>
+                        <span class="case-amount">680 EUR</span>
+                        <h3>Cancelación con reubicación tardía</h3>
+                        <p>El sistema clasificó la incidencia, recuperó normativa y generó un plan de reclamación por etapas.</p>
+                    </article>
+                </div>
+            </section>
+
+            <section id="collaborators" class="content-section">
+                <div class="section-heading">
+                    <span class="eyebrow">Colaboradores</span>
+                    <h2>Equipo de referencia para impulsar el servicio.</h2>
+                </div>
+                <div class="collaborator-grid">
+                    <article class="collaborator-card" data-reveal>
+                        <span class="avatar amber">SM</span>
+                        <div>
+                            <h3>Santiago Montoya</h3>
+                            <p>Estrategia de producto, experiencia SaaS y narrativa comercial.</p>
+                        </div>
+                    </article>
+                    <article class="collaborator-card" data-reveal>
+                        <span class="avatar mint">AB</span>
+                        <div>
+                            <h3>Alejandro Benitez</h3>
+                            <p>Operación, seguimiento de casos e integración de flujos documentales.</p>
+                        </div>
+                    </article>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="/static/js/landing.js"></script>
+</body>
+</html>

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso | {{ app_name }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body data-page="login">
+    <div class="sky-stage" aria-hidden="true">
+        <div class="sky-gradient"></div>
+        <div class="cloud cloud-one"></div>
+        <div class="cloud cloud-two"></div>
+        <div class="route-glow"></div>
+        <div class="scroll-plane" id="scroll-plane">
+            <div class="plane-trail"></div>
+            <img src="/static/img/plane.svg" alt="" />
+        </div>
+    </div>
+
+    <div class="page-shell">
+        <header class="topbar">
+            <a class="brand" href="/">
+                <span class="brand-mark">AC</span>
+                <span>{{ app_name }}</span>
+            </a>
+            <nav class="nav-links">
+                <a href="/">Volver a la landing</a>
+            </nav>
+            <div class="nav-actions">
+                <span class="ghost-btn">Acceso seguro</span>
+            </div>
+        </header>
+
+        <main class="login-shell">
+            <section class="login-copy" data-reveal>
+                <span class="eyebrow">Acceso por roles</span>
+                <h1>Entra al portal adecuado sin mezclar vistas públicas y privadas.</h1>
+                <p>
+                    El middleware resuelve la sesión y te envía al área correcta:
+                    portal de usuario para expedientes o consola admin para ingesta documental.
+                </p>
+                <div class="panel-note">
+                    <strong>Demo user:</strong>
+                    <span>demo@airclaim.ai / demo1234</span>
+                    <strong>Demo admin:</strong>
+                    <span>admin@airclaim.ai / admin1234</span>
+                </div>
+            </section>
+
+            <section class="auth-card login-page-card" data-reveal>
+                <div class="auth-switch">
+                    <button class="segment-btn active" data-auth-view="login">Entrar</button>
+                    <button class="segment-btn" data-auth-view="register">Crear cuenta</button>
+                </div>
+
+                <form id="login-form" class="stack-form auth-form">
+                    <label>
+                        <span>Email</span>
+                        <input name="email" type="email" value="demo@airclaim.ai" required>
+                    </label>
+                    <label>
+                        <span>Password</span>
+                        <input name="password" type="password" value="demo1234" required>
+                    </label>
+                    <button class="primary-btn" type="submit">Entrar al portal</button>
+                </form>
+
+                <form id="register-form" class="stack-form auth-form hidden">
+                    <label>
+                        <span>Nombre completo</span>
+                        <input name="full_name" type="text" placeholder="Ana Lopez" required>
+                    </label>
+                    <label>
+                        <span>Email</span>
+                        <input name="email" type="email" placeholder="ana@email.com" required>
+                    </label>
+                    <label>
+                        <span>Password</span>
+                        <input name="password" type="password" placeholder="Crea una clave" required>
+                    </label>
+                    <button class="primary-btn" type="submit">Crear cuenta</button>
+                </form>
+                <p id="auth-feedback" class="feedback"></p>
+            </section>
+        </main>
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
+    <script src="/static/js/auth.js"></script>
+</body>
+</html>
