@@ -41,10 +41,15 @@ function setupRevealAnimations() {
 }
 
 function updateScrollScene() {
-    if (!scrollPlane) return;
     const scrollTop = window.scrollY || window.pageYOffset;
     const maxScroll = Math.max(document.body.scrollHeight - window.innerHeight, 1);
     const progress = Math.min(scrollTop / maxScroll, 1);
+    document.documentElement.style.setProperty("--scroll-progress", progress.toFixed(4));
+    document.querySelectorAll(".bg-slide").forEach((slide, index) => {
+        const activeIndex = Math.min(2, Math.floor(progress * 3.01));
+        slide.classList.toggle("active", index === activeIndex);
+    });
+    if (!scrollPlane) return;
     const x = -22 + progress * 124;
     const y = 10 + progress * 58 + Math.sin(progress * Math.PI * 5) * 2.5;
     const rotate = -8 + progress * 13;

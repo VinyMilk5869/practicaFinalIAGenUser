@@ -37,9 +37,14 @@ function setupRevealAnimations() {
 }
 
 function updateScrollScene() {
-    if (!scrollPlane) return;
     const scrollTop = window.scrollY || window.pageYOffset;
     const progress = Math.min(scrollTop / Math.max(document.body.scrollHeight - window.innerHeight, 1), 1);
+    document.documentElement.style.setProperty("--scroll-progress", progress.toFixed(4));
+    document.querySelectorAll(".bg-slide").forEach((slide, index) => {
+        const activeIndex = Math.min(2, Math.floor(progress * 3.01));
+        slide.classList.toggle("active", index === activeIndex);
+    });
+    if (!scrollPlane) return;
     scrollPlane.style.transform = `translate(${6 + progress * 46}vw, ${12 + progress * 22}vh) rotate(-6deg) scale(0.96)`;
 }
 
@@ -57,6 +62,7 @@ loginForm.addEventListener("submit", async (event) => {
     try {
         const payload = await api("/api/auth/login", { method: "POST", body: new FormData(loginForm) });
         showToast("Acceso concedido.");
+        document.body.classList.add("is-routing");
         window.location.href = nextDestination(payload);
     } catch (error) {
         authFeedback.textContent = error.message;
@@ -68,6 +74,7 @@ registerForm.addEventListener("submit", async (event) => {
     try {
         const payload = await api("/api/auth/register", { method: "POST", body: new FormData(registerForm) });
         showToast("Cuenta creada correctamente.");
+        document.body.classList.add("is-routing");
         window.location.href = nextDestination(payload);
     } catch (error) {
         authFeedback.textContent = error.message;

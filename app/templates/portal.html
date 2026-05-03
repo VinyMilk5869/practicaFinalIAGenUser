@@ -10,8 +10,14 @@
     <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body data-page="{{ page_mode }}">
+    <div class="scroll-progress" id="scroll-progress" aria-hidden="true"></div>
     <div class="sky-stage" aria-hidden="true">
         <div class="sky-gradient"></div>
+        <div class="bg-slide bg-slide-one active"></div>
+        <div class="bg-slide bg-slide-two"></div>
+        <div class="bg-slide bg-slide-three"></div>
+        <div class="sky-grid"></div>
+        <div class="runway-lines"></div>
         <div class="cloud cloud-one"></div>
         <div class="cloud cloud-two"></div>
         <div class="cloud cloud-three"></div>
@@ -54,6 +60,17 @@
                         Crea expedientes, revisa el estado de cada caso y obtiene apoyo del agente en tiempo real.
                         {% endif %}
                     </p>
+                    <div class="portal-quicknav" aria-label="Navegacion de trabajo">
+                        {% if page_mode == 'admin' %}
+                        <a href="#docs-form">Subir documentos</a>
+                        <a href="#docs-list">Base documental</a>
+                        <a href="#doc-detail-form">Control</a>
+                        {% else %}
+                        <a href="#incident-form">Nueva incidencia</a>
+                        <a href="#incidents-list">Incidencias</a>
+                        <a href="#chat-thread">Agente</a>
+                        {% endif %}
+                    </div>
                 </div>
                 <div class="panel-note">
                     <strong id="portal-user-name">{{ current_user.full_name }}</strong>

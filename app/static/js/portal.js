@@ -56,9 +56,14 @@ function setupRevealAnimations() {
 }
 
 function updateScrollScene() {
-    if (!scrollPlane) return;
     const scrollTop = window.scrollY || window.pageYOffset;
     const progress = Math.min(scrollTop / Math.max(document.body.scrollHeight - window.innerHeight, 1), 1);
+    document.documentElement.style.setProperty("--scroll-progress", progress.toFixed(4));
+    document.querySelectorAll(".bg-slide").forEach((slide, index) => {
+        const activeIndex = Math.min(2, Math.floor(progress * 3.01));
+        slide.classList.toggle("active", index === activeIndex);
+    });
+    if (!scrollPlane) return;
     const x = -16 + progress * 116;
     const y = 8 + progress * 50;
     scrollPlane.style.transform = `translate(${x}vw, ${y}vh) rotate(${progress * 12 - 7}deg) scale(${0.92 + progress * 0.14})`;
@@ -81,7 +86,7 @@ function renderIncidents() {
     }
     incidentsList.innerHTML = state.incidents
         .map((item) => `
-            <article class="incident-item">
+            <article class="incident-item ${item.id === state.selectedIncidentId ? "active" : ""}">
                 <button type="button" data-incident-id="${item.id}">
                     <strong>${item.airline} · ${item.flight_number}</strong>
                     <div class="incident-meta">${item.category}</div>

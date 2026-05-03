@@ -10,8 +10,14 @@
     <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body data-page="landing">
+    <div class="scroll-progress" id="scroll-progress" aria-hidden="true"></div>
     <div class="sky-stage" aria-hidden="true">
         <div class="sky-gradient"></div>
+        <div class="bg-slide bg-slide-one active"></div>
+        <div class="bg-slide bg-slide-two"></div>
+        <div class="bg-slide bg-slide-three"></div>
+        <div class="sky-grid"></div>
+        <div class="runway-lines"></div>
         <div class="cloud cloud-one"></div>
         <div class="cloud cloud-two"></div>
         <div class="cloud cloud-three"></div>
@@ -47,7 +53,7 @@
             <section id="hero" class="hero-section">
                 <div class="hero-copy">
                     <span class="eyebrow">IA generativa + RAG + automatizacion documental</span>
-                    <h1>Reclamaciones aereas con un agente que entiende el caso y te ayuda a cerrarlo.</h1>
+                    <h1>Reclamaciones aereas con un agente que entiende cada caso.</h1>
                     <p>
                         Convierte retrasos, cancelaciones y problemas de equipaje en expedientes trazables,
                         documentados y listos para reclamar con apoyo de OCR, almacenamiento, busqueda semantica y chat.
@@ -64,10 +70,12 @@
 
                     <div class="hero-mini-rail" data-reveal>
                         <article class="mini-rail-item">
+                            <span class="rail-kicker">01</span>
                             <strong>Usuarios autenticados</strong>
                             <span>Rutas privadas para expedientes, conversaciones y seguimiento del caso.</span>
                         </article>
                         <article class="mini-rail-item">
+                            <span class="rail-kicker">02</span>
                             <strong>Consola admin</strong>
                             <span>Ingesta documental controlada para OCR, indexacion y memoria del sistema.</span>
                         </article>
@@ -106,6 +114,11 @@
                         <span>Protected app</span>
                         <span>Role-based admin</span>
                         <span>Live stats</span>
+                    </div>
+                    <div class="slider-orbit" aria-hidden="true">
+                        <span></span>
+                        <span></span>
+                        <span></span>
                     </div>
                 </div>
             </section>

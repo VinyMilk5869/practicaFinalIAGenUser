@@ -10,8 +10,14 @@
     <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body data-page="login">
+    <div class="scroll-progress" id="scroll-progress" aria-hidden="true"></div>
     <div class="sky-stage" aria-hidden="true">
         <div class="sky-gradient"></div>
+        <div class="bg-slide bg-slide-one active"></div>
+        <div class="bg-slide bg-slide-two"></div>
+        <div class="bg-slide bg-slide-three"></div>
+        <div class="sky-grid"></div>
+        <div class="runway-lines"></div>
         <div class="cloud cloud-one"></div>
         <div class="cloud cloud-two"></div>
         <div class="route-glow"></div>
@@ -38,11 +44,17 @@
         <main class="login-shell">
             <section class="login-copy" data-reveal>
                 <span class="eyebrow">Acceso por roles</span>
-                <h1>Entra al portal adecuado sin mezclar vistas públicas y privadas.</h1>
+                <h1>Entra limpio. El portal te lleva exactamente donde debes estar.</h1>
                 <p>
-                    El middleware resuelve la sesión y te envía al área correcta:
+                    El middleware resuelve la sesion y te envia al area correcta:
                     portal de usuario para expedientes o consola admin para ingesta documental.
                 </p>
+                <div class="login-route">
+                    <span>Login</span>
+                    <span>Rol</span>
+                    <span>Portal</span>
+                    <span>Accion</span>
+                </div>
                 <div class="panel-note">
                     <strong>Demo user:</strong>
                     <span>demo@airclaim.ai / demo1234</span>
