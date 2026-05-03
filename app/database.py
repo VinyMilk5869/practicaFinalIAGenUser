@@ -135,7 +135,9 @@ CREATE TABLE knowledge_documents (
 
 class Database:
     def __init__(self) -> None:
-        self.requested_backend = "sqlserver" if settings.is_sqlserver and pyodbc else "sqlite"
+        if settings.database_backend.lower() == "sqlserver" and not pyodbc:
+            raise RuntimeError("DATABASE_BACKEND=sqlserver requiere pyodbc instalado.")
+        self.requested_backend = "sqlserver" if settings.is_sqlserver else "sqlite"
         self.backend = self.requested_backend
         self.last_error = ""
         self.sqlite_path = Path(settings.sqlite_path)
@@ -148,7 +150,7 @@ class Database:
                 conn = pyodbc.connect(settings.sqlserver_connection_string)  # type: ignore[arg-type]
             except Exception as exc:  # noqa: BLE001
                 self.last_error = str(exc)
-                self.backend = "sqlite"
+                raise RuntimeError(f"No se pudo conectar a Azure SQL / SQL Server: {exc}") from exc
             else:
                 try:
                     yield conn
@@ -221,8 +223,7 @@ class Database:
                     conn.close()
             except Exception as exc:  # noqa: BLE001
                 self.last_error = str(exc)
-                self.backend = "sqlite"
-                self.execute_script(SQLITE_SCHEMA)
+                raise RuntimeError(f"No se pudo inicializar Azure SQL / SQL Server: {exc}") from exc
         else:
             self.execute_script(SQLITE_SCHEMA)
         self.ensure_schema_extensions()

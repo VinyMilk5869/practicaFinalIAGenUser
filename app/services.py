@@ -52,17 +52,32 @@ def classify_incident(summary: str) -> tuple[str, float, str]:
     return ("general_claim", 0.74, "Clasificacion generica a revisar por el agente.")
 
 
+def estimate_compensation(incident: dict[str, Any]) -> float | None:
+    category = str(incident.get("category", "")).lower()
+    summary = str(incident.get("summary", "")).lower()
+    if "delay" in category or "retraso" in category:
+        return 250.0
+    if "cancellation" in category or "cancel" in category:
+        return 400.0
+    if "baggage" in category or "equipaje" in category or "maleta" in summary:
+        return 420.0
+    return None
+
+
 class StorageService:
     def __init__(self) -> None:
         self.local_dir = UPLOAD_DIR
         self.local_dir.mkdir(parents=True, exist_ok=True)
         self.client = None
         self.container_ready = False
+        self.azure_required = bool(settings.blob_connection_string)
         if BlobServiceClient and settings.blob_connection_string:
             try:
                 self.client = BlobServiceClient.from_connection_string(settings.blob_connection_string)
-            except Exception:  # pragma: no cover
-                self.client = None
+            except Exception as exc:  # pragma: no cover
+                raise RuntimeError(f"No se pudo crear el cliente de Azure Blob Storage: {exc}") from exc
+        elif self.azure_required:
+            raise RuntimeError("AZURE_STORAGE_CONNECTION_STRING requiere azure-storage-blob instalado.")
 
     def ensure_container(self) -> None:
         if not self.client or self.container_ready:
@@ -80,8 +95,10 @@ class StorageService:
                 blob_client = self.client.get_blob_client(container=settings.blob_container_name, blob=safe_name)
                 blob_client.upload_blob(content, overwrite=True)
                 return safe_name
-            except Exception:  # pragma: no cover
-                pass
+            except Exception as exc:  # pragma: no cover
+                raise RuntimeError(f"No se pudo guardar el archivo en Azure Blob Storage: {exc}") from exc
+        if self.azure_required:
+            raise RuntimeError("Azure Blob Storage esta configurado, pero el cliente no esta disponible.")
         destination = self.local_dir / safe_name
         destination.write_bytes(content)
         return f"local/{safe_name}"
@@ -100,22 +117,33 @@ class StorageService:
                 blob_client = self.client.get_blob_client(container=settings.blob_container_name, blob=blob_name)
                 blob_client.delete_blob(delete_snapshots="include")
                 return True
-            except Exception:  # pragma: no cover
-                return False
+            except Exception as exc:  # pragma: no cover
+                raise RuntimeError(f"No se pudo eliminar el archivo de Azure Blob Storage: {exc}") from exc
         return False
+
+    def status(self) -> dict[str, Any]:
+        return {
+            "configured": bool(settings.blob_connection_string),
+            "client_ready": bool(self.client),
+            "container": settings.blob_container_name,
+            "mode": "azure_blob" if self.client else "local",
+        }
 
 
 class OCRService:
     def __init__(self) -> None:
         self.client = None
+        self.azure_required = bool(settings.azure_ocr_endpoint or settings.azure_ocr_key)
         if DocumentIntelligenceClient and settings.azure_ocr_endpoint and settings.azure_ocr_key and AzureKeyCredential:
             try:
                 self.client = DocumentIntelligenceClient(
                     endpoint=settings.azure_ocr_endpoint,
                     credential=AzureKeyCredential(settings.azure_ocr_key),
                 )
-            except Exception:  # pragma: no cover
-                self.client = None
+            except Exception as exc:  # pragma: no cover
+                raise RuntimeError(f"No se pudo crear el cliente de Azure OCR: {exc}") from exc
+        elif self.azure_required:
+            raise RuntimeError("Azure OCR requiere AZURE_OCR_ENDPOINT, AZURE_OCR_KEY y azure-ai-documentintelligence.")
 
     def extract_text(self, filename: str, content: bytes) -> str:
         suffix = Path(filename).suffix.lower()
@@ -131,13 +159,23 @@ class OCRService:
                     for line in page.lines:
                         lines.append(line.content)
                 return "\n".join(lines).strip()
-            except Exception:  # pragma: no cover
-                pass
+            except Exception as exc:  # pragma: no cover
+                raise RuntimeError(f"No se pudo ejecutar OCR en Azure Document Intelligence: {exc}") from exc
+
+        if self.azure_required:
+            raise RuntimeError("Azure OCR esta configurado, pero el cliente no esta disponible.")
 
         return (
             f"Documento {filename} cargado correctamente. "
             "No se pudo ejecutar OCR remoto en este entorno, asi que el contenido debe validarse manualmente."
         )
+
+    def status(self) -> dict[str, Any]:
+        return {
+            "configured": bool(settings.azure_ocr_endpoint and settings.azure_ocr_key),
+            "client_ready": bool(self.client),
+            "mode": "azure_document_intelligence" if self.client else "local_text_only",
+        }
 
 
 class SearchService:
@@ -145,6 +183,7 @@ class SearchService:
         self.search_client = None
         self.index_client = None
         self.index_checked = False
+        self.azure_required = bool(settings.azure_search_endpoint or settings.azure_search_key)
         self.azure_ready = bool(
             SearchClient
             and SearchIndexClient
@@ -157,9 +196,10 @@ class SearchService:
             try:
                 self.index_client = SearchIndexClient(settings.azure_search_endpoint, credential)
                 self.search_client = SearchClient(settings.azure_search_endpoint, settings.azure_search_index, credential)
-            except Exception:  # pragma: no cover
-                self.index_client = None
-                self.search_client = None
+            except Exception as exc:  # pragma: no cover
+                raise RuntimeError(f"No se pudo crear el cliente de Azure AI Search: {exc}") from exc
+        elif self.azure_required:
+            raise RuntimeError("Azure AI Search requiere endpoint, key y azure-search-documents.")
 
     def ensure_index(self) -> None:
         if not self.index_client or self.index_checked:
@@ -197,15 +237,17 @@ class SearchService:
                     ]
                 )
                 return
-            except Exception:  # pragma: no cover
-                pass
+            except Exception as exc:  # pragma: no cover
+                raise RuntimeError(f"No se pudo indexar el documento en Azure AI Search: {exc}") from exc
+        if self.azure_required:
+            raise RuntimeError("Azure AI Search esta configurado, pero el cliente no esta disponible.")
 
     def delete_document(self, doc_id: int) -> None:
         if self.search_client:
             try:
                 self.search_client.delete_documents([{"id": str(doc_id)}])
-            except Exception:  # pragma: no cover
-                pass
+            except Exception as exc:  # pragma: no cover
+                raise RuntimeError(f"No se pudo eliminar el documento de Azure AI Search: {exc}") from exc
 
     def set_document_active(self, doc_id: int, filename: str, content: str, source_kind: str, is_active: bool) -> None:
         self.index_document(doc_id, filename, content, source_kind, is_active=is_active)
@@ -218,8 +260,11 @@ class SearchService:
                     {"filename": item["filename"], "content": item["content"], "score": item.get("@search.score", 1)}
                     for item in results
                 ]
-            except Exception:  # pragma: no cover
-                pass
+            except Exception as exc:  # pragma: no cover
+                raise RuntimeError(f"No se pudo consultar Azure AI Search: {exc}") from exc
+
+        if self.azure_required:
+            raise RuntimeError("Azure AI Search esta configurado, pero el cliente no esta disponible.")
 
         words = [w for w in re.findall(r"\w+", query.lower()) if len(w) > 2]
         docs = db.fetchall(
@@ -238,11 +283,39 @@ class SearchService:
                 scored.append({"filename": doc["filename"], "content": doc["content_text"], "score": score})
         return sorted(scored, key=lambda item: item["score"], reverse=True)[:limit]
 
+    def reindex_active_documents(self) -> dict[str, Any]:
+        docs = db.fetchall(
+            """
+            SELECT id, filename, content_text, source_kind, is_active
+            FROM knowledge_documents
+            WHERE indexed = 1 AND is_active = 1
+            ORDER BY id ASC
+            """
+        )
+        for doc in docs:
+            self.index_document(
+                int(doc["id"]),
+                doc["filename"],
+                doc["content_text"],
+                doc["source_kind"],
+                is_active=bool(doc["is_active"]),
+            )
+        return {"reindexed": len(docs), "index": settings.azure_search_index}
+
+    def status(self) -> dict[str, Any]:
+        return {
+            "configured": bool(settings.azure_search_endpoint and settings.azure_search_key),
+            "client_ready": bool(self.search_client),
+            "index": settings.azure_search_index,
+            "mode": "azure_ai_search" if self.search_client else "local_keyword_search",
+        }
+
 
 @dataclass(slots=True)
 class ChatResult:
     answer: str
     citations: list[dict[str, Any]]
+    estimated_compensation: float | None = None
 
 
 class ClaimAgentService:
@@ -256,10 +329,11 @@ class ClaimAgentService:
     def answer(self, incident: dict[str, Any], user_message: str) -> ChatResult:
         context_docs = self.build_context(f"{incident['summary']} {user_message}")
         citations = [{"filename": item["filename"], "excerpt": item["content"][:220]} for item in context_docs]
+        estimated_compensation = estimate_compensation(incident)
 
         if self.client:
             try:
-                prompt = self._prompt(incident, user_message, context_docs)
+                prompt = self._prompt(incident, user_message, context_docs, estimated_compensation)
                 response = self.client.responses.create(
                     model=settings.openai_model,
                     input=prompt,
@@ -267,14 +341,23 @@ class ClaimAgentService:
                 )
                 text = getattr(response, "output_text", "").strip()
                 if text:
-                    return ChatResult(answer=text, citations=citations)
+                    return ChatResult(answer=text, citations=citations, estimated_compensation=estimated_compensation)
             except Exception:  # pragma: no cover
                 pass
 
-        return ChatResult(answer=self._fallback_answer(incident, user_message, context_docs), citations=citations)
+        return ChatResult(
+            answer=self._fallback_answer(incident, user_message, context_docs, estimated_compensation),
+            citations=citations,
+            estimated_compensation=estimated_compensation,
+        )
 
     @staticmethod
-    def _prompt(incident: dict[str, Any], user_message: str, context_docs: list[dict[str, Any]]) -> str:
+    def _prompt(
+        incident: dict[str, Any],
+        user_message: str,
+        context_docs: list[dict[str, Any]],
+        estimated_compensation: float | None,
+    ) -> str:
         snippets = "\n\n".join(
             f"Fuente: {item['filename']}\nContenido: {item['content'][:1200]}" for item in context_docs
         )
@@ -287,6 +370,7 @@ Incidente:
 - Vuelo: {incident['flight_number']}
 - Categoria: {incident['category']}
 - Estado: {incident['status']}
+- Compensacion estimada por reglas del sistema: {f'{estimated_compensation:.0f} EUR' if estimated_compensation else 'pendiente de estimacion'}
 - Resumen: {incident['summary']}
 
 Contexto recuperado para RAG:
@@ -298,18 +382,28 @@ Solicitud del usuario:
 Responde en espanol con:
 1. Diagnostico rapido
 2. Proxima accion recomendada
-3. Borrador o fragmento util para la reclamacion si aplica
-4. Lista corta de documentos faltantes
+3. Compensacion orientativa si existe base suficiente
+4. Borrador o fragmento util para la reclamacion si aplica
+5. Lista corta de documentos faltantes
 """
 
     @staticmethod
     def _fallback_answer(
-        incident: dict[str, Any], user_message: str, context_docs: list[dict[str, Any]]
+        incident: dict[str, Any],
+        user_message: str,
+        context_docs: list[dict[str, Any]],
+        estimated_compensation: float | None,
     ) -> str:
         documents = ", ".join(doc["filename"] for doc in context_docs) if context_docs else "sin fuentes externas indexadas"
+        compensation_line = (
+            f"Compensacion orientativa: {estimated_compensation:.0f} EUR, pendiente de validar con la evidencia del caso.\n\n"
+            if estimated_compensation
+            else "Compensacion orientativa: pendiente de estimar; necesito mas detalle sobre tiempos, ruta y motivo comunicado por la aerolinea.\n\n"
+        )
         return (
             f"Diagnostico rapido: el caso '{incident['category']}' para el vuelo {incident['flight_number']} "
             f"de {incident['airline']} tiene base razonable para reclamacion.\n\n"
+            f"{compensation_line}"
             f"Proxima accion recomendada: consolidar tarjeta de embarque, justificante de retraso o incidencia "
             f"y gastos asociados antes de enviar la reclamacion formal.\n\n"
             f"Borrador util: \"Solicito la compensacion y el reembolso de gastos derivados de la incidencia "

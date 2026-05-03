@@ -63,11 +63,13 @@
                     <div class="portal-quicknav" aria-label="Navegacion de trabajo">
                         {% if page_mode == 'admin' %}
                         <a href="#docs-form">Subir documentos</a>
+                        <a href="#system-sync-panel">Sincronizacion</a>
                         <a href="#docs-list">Base documental</a>
                         <a href="#doc-detail-form">Control</a>
                         {% else %}
                         <a href="#incident-form">Nueva incidencia</a>
                         <a href="#incidents-list">Incidencias</a>
+                        <a href="#incident-detail">Historial</a>
                         <a href="#chat-thread">Agente</a>
                         {% endif %}
                     </div>
@@ -112,12 +114,12 @@
                                 <span>Resumen del incidente</span>
                                 <textarea name="summary" rows="4" placeholder="Describe retraso, cancelación o problema de equipaje" required></textarea>
                             </label>
-                            <label>
-                                <span>Compensación estimada</span>
-                                <input name="claim_amount" type="number" min="0" step="10" value="250">
-                            </label>
                             <button class="primary-btn" type="submit">Crear expediente</button>
                         </form>
+                        <div class="panel-note">
+                            <strong>Compensacion:</strong>
+                            <span>No la introduce el usuario. El agente la estima durante la conversacion y actualiza el expediente.</span>
+                        </div>
                     </section>
 
                     <section class="dashboard-panel span-two" data-reveal>
@@ -125,6 +127,14 @@
                             <h3>Incidencias</h3>
                         </div>
                         <div id="incidents-list" class="incident-list"></div>
+                    </section>
+
+                    <section class="dashboard-panel span-two" data-reveal>
+                        <div class="panel-header">
+                            <h3>Detalle e historial</h3>
+                            <span id="incident-detail-context">Selecciona una incidencia</span>
+                        </div>
+                        <div id="incident-detail" class="incident-detail"></div>
                     </section>
 
                     <section class="dashboard-panel span-two" data-reveal>
@@ -189,6 +199,14 @@
                                 <strong data-stat="success_rate">--</strong>
                             </article>
                         </div>
+                    </section>
+
+                    <section class="dashboard-panel span-two" id="system-sync-panel" data-reveal>
+                        <div class="panel-header">
+                            <h3>Sincronizacion Azure</h3>
+                            <button class="primary-btn" type="button" id="sync-system-btn">Sincronizar RAG e indices</button>
+                        </div>
+                        <div id="system-status" class="system-status"></div>
                     </section>
 
                     <section class="dashboard-panel span-two" data-reveal>

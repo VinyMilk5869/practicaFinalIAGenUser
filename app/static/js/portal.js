@@ -1,9 +1,12 @@
 const pageMode = document.body.dataset.page;
 const userCard = document.getElementById("user-card");
 const incidentsList = document.getElementById("incidents-list");
+const incidentDetail = document.getElementById("incident-detail");
+const incidentDetailContext = document.getElementById("incident-detail-context");
 const chatThread = document.getElementById("chat-thread");
 const chatContext = document.getElementById("chat-context");
 const docsList = document.getElementById("docs-list");
+const systemStatus = document.getElementById("system-status");
 const toast = document.getElementById("toast");
 const scrollPlane = document.getElementById("scroll-plane");
 const docDetailForm = document.getElementById("doc-detail-form");
@@ -12,9 +15,11 @@ const deleteDocBtn = document.getElementById("delete-doc-btn");
 const state = {
     user: null,
     incidents: [],
+    selectedIncidentDetail: null,
     selectedIncidentId: null,
     documents: [],
     selectedDocumentId: null,
+    systemStatus: null,
 };
 
 async function api(path, options = {}) {
@@ -82,6 +87,7 @@ function renderIncidents() {
     if (!incidentsList) return;
     if (!state.incidents.length) {
         incidentsList.innerHTML = '<div class="empty-state">No hay incidencias todavía. Crea la primera y seguimos.</div>';
+        renderIncidentDetail(null);
         return;
     }
     incidentsList.innerHTML = state.incidents
@@ -91,7 +97,7 @@ function renderIncidents() {
                     <strong>${item.airline} · ${item.flight_number}</strong>
                     <div class="incident-meta">${item.category}</div>
                     <div>${item.summary}</div>
-                    <div class="incident-meta">${item.status} · ${item.claim_amount} EUR</div>
+                    <div class="incident-meta">${item.status} · ${formatCompensation(item.claim_amount)}</div>
                 </button>
             </article>
         `)
@@ -99,6 +105,75 @@ function renderIncidents() {
     incidentsList.querySelectorAll("[data-incident-id]").forEach((button) => {
         button.addEventListener("click", () => selectIncident(Number(button.dataset.incidentId)));
     });
+}
+
+function formatCompensation(amount) {
+    const value = Number(amount || 0);
+    return value > 0 ? `${value.toFixed(0)} EUR estimados` : "Pendiente del agente";
+}
+
+function renderIncidentDetail(detail) {
+    if (!incidentDetail) return;
+    if (!detail) {
+        incidentDetail.innerHTML = '<div class="empty-state">Selecciona una incidencia para ver su historial, clasificacion y conversacion.</div>';
+        if (incidentDetailContext) incidentDetailContext.textContent = "Selecciona una incidencia";
+        return;
+    }
+    const incident = detail.incident;
+    if (incidentDetailContext) {
+        incidentDetailContext.textContent = `${incident.airline} · ${incident.flight_number}`;
+    }
+    const logs = detail.classification_logs || [];
+    const messages = detail.messages || [];
+    const logItems = logs
+        .map((log) => `
+            <article class="timeline-item">
+                <strong>Clasificacion: ${log.category}</strong>
+                <span>${Math.round(Number(log.confidence || 0) * 100)}% confianza · ${formatDate(log.created_at)}</span>
+                <p>${log.notes}</p>
+            </article>
+        `)
+        .join("");
+    const messageItems = messages
+        .map((message) => `
+            <article class="timeline-item">
+                <strong>${message.role === "assistant" ? "Agente" : "Usuario"}</strong>
+                <span>${formatDate(message.created_at)}</span>
+                <p>${message.content}</p>
+            </article>
+        `)
+        .join("");
+    incidentDetail.innerHTML = `
+        <div class="detail-grid">
+            <div>
+                <span class="incident-meta">Estado</span>
+                <strong>${incident.status}</strong>
+            </div>
+            <div>
+                <span class="incident-meta">Compensacion</span>
+                <strong>${formatCompensation(incident.claim_amount)}</strong>
+            </div>
+            <div>
+                <span class="incident-meta">Categoria</span>
+                <strong>${incident.category}</strong>
+            </div>
+            <div>
+                <span class="incident-meta">Creado</span>
+                <strong>${formatDate(incident.created_at)}</strong>
+            </div>
+        </div>
+        <div class="timeline">
+            ${logItems || '<article class="timeline-item"><span>Sin logs de clasificacion.</span></article>'}
+            ${messageItems || '<article class="timeline-item"><span>Sin mensajes todavia.</span></article>'}
+        </div>
+    `;
+}
+
+function formatDate(value) {
+    if (!value) return "Sin fecha";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleString("es-ES", { dateStyle: "short", timeStyle: "short" });
 }
 
 function renderMessages(items = []) {
@@ -148,6 +223,39 @@ function renderDocuments(items = []) {
     docsList.querySelectorAll("[data-document-id]").forEach((button) => {
         button.addEventListener("click", () => selectDocument(Number(button.dataset.documentId)));
     });
+}
+
+function renderSystemStatus(payload) {
+    if (!systemStatus) return;
+    if (!payload) {
+        systemStatus.innerHTML = '<div class="empty-state">Cargando estado de Azure, RAG, indices y base de datos.</div>';
+        return;
+    }
+    const counts = payload.counts || {};
+    systemStatus.innerHTML = `
+        <div class="system-grid">
+            ${systemTile("BD", payload.database?.active_backend, payload.database?.active_backend === "sqlserver")}
+            ${systemTile("Blob", payload.blob?.container, payload.blob?.mode === "azure_blob")}
+            ${systemTile("OCR", payload.ocr?.mode, payload.ocr?.mode === "azure_document_intelligence")}
+            ${systemTile("RAG", payload.search?.index, payload.search?.mode === "azure_ai_search")}
+        </div>
+        <div class="detail-grid">
+            <div><span class="incident-meta">Documentos</span><strong>${counts.documents ?? "--"}</strong></div>
+            <div><span class="incident-meta">Activos</span><strong>${counts.active_documents ?? "--"}</strong></div>
+            <div><span class="incident-meta">Indexados</span><strong>${counts.indexed_documents ?? "--"}</strong></div>
+            <div><span class="incident-meta">En Blob Azure</span><strong>${counts.azure_blob_documents ?? "--"}</strong></div>
+        </div>
+    `;
+}
+
+function systemTile(label, value, ready) {
+    return `
+        <article class="system-tile ${ready ? "ready" : "warning"}">
+            <span>${label}</span>
+            <strong>${ready ? "Sincronizado" : "Revisar"}</strong>
+            <small>${value || "Sin configurar"}</small>
+        </article>
+    `;
 }
 
 function populateDocumentForm(item) {
@@ -200,6 +308,14 @@ async function loadStats() {
     });
 }
 
+async function loadSystemStatus() {
+    if (!systemStatus) return;
+    renderSystemStatus(null);
+    const response = await api("/api/admin/system/status");
+    state.systemStatus = response;
+    renderSystemStatus(response);
+}
+
 async function restoreSession() {
     const response = await api("/api/auth/me");
     state.user = response.user;
@@ -214,6 +330,7 @@ async function loadIncidents() {
         await selectIncident(state.incidents[0].id);
     } else if (!state.incidents.length) {
         renderMessages();
+        renderIncidentDetail(null);
     }
 }
 
@@ -223,8 +340,14 @@ async function selectIncident(incidentId) {
     if (chatContext) {
         chatContext.textContent = incident ? `${incident.airline} · ${incident.flight_number}` : "Selecciona una incidencia";
     }
-    const response = await api(`/api/incidents/${incidentId}/messages`);
-    renderMessages(response.items);
+    renderIncidents();
+    const [detailResponse, messagesResponse] = await Promise.all([
+        api(`/api/incidents/${incidentId}`),
+        api(`/api/incidents/${incidentId}/messages`),
+    ]);
+    state.selectedIncidentDetail = detailResponse;
+    renderIncidentDetail(detailResponse);
+    renderMessages(messagesResponse.items);
 }
 
 async function loadDocuments() {
@@ -281,10 +404,23 @@ document.getElementById("chat-form")?.addEventListener("submit", async (event) =
             body: new FormData(form),
         });
         form.reset();
+        await loadIncidents();
         await selectIncident(state.selectedIncidentId);
         if (response.citations?.length) {
             showToast(`Respuesta generada con ${response.citations.length} fuente(s).`);
+        } else if (response.estimated_compensation) {
+            showToast(`Compensacion estimada: ${response.estimated_compensation.toFixed(0)} EUR.`);
         }
+    } catch (error) {
+        showToast(error.message);
+    }
+});
+
+document.getElementById("sync-system-btn")?.addEventListener("click", async () => {
+    try {
+        const result = await api("/api/admin/system/sync", { method: "POST" });
+        showToast(`Sincronizacion completada: ${result.search.reindexed} documento(s) reindexado(s).`);
+        await Promise.all([loadSystemStatus(), loadStats(), loadDocuments()]);
     } catch (error) {
         showToast(error.message);
     }
@@ -303,7 +439,7 @@ document.getElementById("docs-form")?.addEventListener("submit", async (event) =
         await api("/api/admin/knowledge/upload", { method: "POST", body: formData });
         input.value = "";
         showToast("Documentos ingresados al modelo.");
-        await Promise.all([loadDocuments(), loadStats()]);
+        await Promise.all([loadDocuments(), loadStats(), loadSystemStatus()]);
     } catch (error) {
         showToast(error.message);
     }
@@ -332,6 +468,7 @@ docDetailForm?.addEventListener("submit", async (event) => {
         renderDocuments(state.documents);
         populateDocumentForm(response.item);
         showToast("Documento actualizado.");
+        await loadSystemStatus();
     } catch (error) {
         showToast(error.message);
     }
@@ -349,7 +486,7 @@ deleteDocBtn?.addEventListener("click", async () => {
         state.selectedDocumentId = state.documents[0]?.id || null;
         renderDocuments(state.documents);
         populateDocumentForm(state.documents[0] || null);
-        await loadStats();
+        await Promise.all([loadStats(), loadSystemStatus()]);
         showToast("Documento eliminado del blob y de la base.");
     } catch (error) {
         showToast(error.message);
@@ -365,7 +502,7 @@ updateScrollScene();
 restoreSession()
     .then(() => {
         if (pageMode === "admin") {
-            return Promise.all([loadStats(), loadDocuments()]);
+            return Promise.all([loadStats(), loadDocuments(), loadSystemStatus()]);
         }
         return loadIncidents();
     })

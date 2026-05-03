@@ -20,7 +20,10 @@ from .services import (
     delete_knowledge_document,
     get_knowledge_document,
     list_knowledge_documents,
+    ocr_service,
     persist_training_document,
+    search_service,
+    storage_service,
     update_knowledge_document,
 )
 
@@ -176,7 +179,7 @@ def stats() -> dict:
     users = db.fetchone("SELECT COUNT(*) AS total FROM users") or {"total": 0}
     incidents = db.fetchone("SELECT COUNT(*) AS total FROM incidents") or {"total": 0}
     docs = db.fetchone("SELECT COUNT(*) AS total FROM knowledge_documents") or {"total": 0}
-    avg_claim = db.fetchone("SELECT COALESCE(AVG(claim_amount), 0) AS avg_claim FROM incidents") or {"avg_claim": 0}
+    avg_claim = db.fetchone("SELECT COALESCE(AVG(claim_amount), 0) AS avg_claim FROM incidents WHERE claim_amount > 0") or {"avg_claim": 0}
     return {
         "users": int(users["total"]),
         "incidents": int(incidents["total"]),
@@ -262,7 +265,6 @@ async def create_incident(
     flight_number: str = Form(...),
     airline: str = Form(...),
     summary: str = Form(...),
-    claim_amount: float = Form(250),
     user: dict = Depends(current_user),
 ) -> dict:
     category, confidence, notes = classify_incident(summary)
@@ -271,7 +273,7 @@ async def create_incident(
         INSERT INTO incidents (user_id, flight_number, airline, category, status, summary, claim_amount, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        (user["id"], flight_number, airline, category, "Nuevo", summary, claim_amount, db.now_iso()),
+        (user["id"], flight_number, airline, category, "Pendiente de estimacion", summary, 0.0, db.now_iso()),
     )
     db.execute_no_return(
         """
@@ -284,7 +286,7 @@ async def create_incident(
         "id": incident_id,
         "category": category,
         "classification_confidence": confidence,
-        "status": "Nuevo",
+        "status": "Pendiente de estimacion",
     }
 
 
@@ -306,7 +308,16 @@ def get_incident(incident_id: int, user: dict = Depends(current_user)) -> dict:
         """,
         (incident_id,),
     )
-    return {"incident": incident, "classification_logs": logs}
+    messages = db.fetchall(
+        """
+        SELECT id, role, content, citations_json, created_at
+        FROM chat_messages WHERE incident_id = ? ORDER BY id ASC
+        """,
+        (incident_id,),
+    )
+    for message in messages:
+        message["citations"] = json.loads(message.get("citations_json") or "[]")
+    return {"incident": incident, "classification_logs": logs, "messages": messages}
 
 
 @app.get("/api/incidents/{incident_id}/messages")
@@ -344,7 +355,57 @@ async def create_message(
     append_chat_message(incident_id, "user", message)
     response = claim_agent_service.answer(incident, message)
     append_chat_message(incident_id, "assistant", response.answer, response.citations)
-    return {"answer": response.answer, "citations": response.citations}
+    if response.estimated_compensation and float(incident.get("claim_amount") or 0) <= 0:
+        db.execute_no_return(
+            "UPDATE incidents SET claim_amount = ?, status = ? WHERE id = ?",
+            (response.estimated_compensation, "Compensacion estimada", incident_id),
+        )
+    return {
+        "answer": response.answer,
+        "citations": response.citations,
+        "estimated_compensation": response.estimated_compensation,
+    }
+
+
+@app.get("/api/admin/system/status")
+def admin_system_status(admin: dict = Depends(admin_user)) -> dict:
+    users = db.fetchone("SELECT COUNT(*) AS total FROM users") or {"total": 0}
+    incidents = db.fetchone("SELECT COUNT(*) AS total FROM incidents") or {"total": 0}
+    docs = db.fetchone("SELECT COUNT(*) AS total FROM knowledge_documents") or {"total": 0}
+    indexed_docs = db.fetchone("SELECT COUNT(*) AS total FROM knowledge_documents WHERE indexed = 1") or {"total": 0}
+    active_docs = db.fetchone("SELECT COUNT(*) AS total FROM knowledge_documents WHERE is_active = 1") or {"total": 0}
+    azure_blob_docs = db.fetchone("SELECT COUNT(*) AS total FROM knowledge_documents WHERE blob_name NOT LIKE 'local/%'") or {"total": 0}
+    return {
+        "requested_by": admin["email"],
+        "database": {
+            "requested_backend": db.requested_backend,
+            "active_backend": db.backend,
+            "last_error": db.last_error,
+        },
+        "blob": storage_service.status(),
+        "ocr": ocr_service.status(),
+        "search": search_service.status(),
+        "counts": {
+            "users": int(users["total"]),
+            "incidents": int(incidents["total"]),
+            "documents": int(docs["total"]),
+            "indexed_documents": int(indexed_docs["total"]),
+            "active_documents": int(active_docs["total"]),
+            "azure_blob_documents": int(azure_blob_docs["total"]),
+        },
+    }
+
+
+@app.post("/api/admin/system/sync")
+def admin_system_sync(admin: dict = Depends(admin_user)) -> dict:
+    storage_service.ensure_container()
+    search_result = search_service.reindex_active_documents()
+    return {
+        "synced_by": admin["email"],
+        "database_backend": db.backend,
+        "blob_container": storage_service.status()["container"],
+        "search": search_result,
+    }
 
 
 @app.get("/api/admin/knowledge/documents")

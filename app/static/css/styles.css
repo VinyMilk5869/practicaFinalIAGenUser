@@ -942,7 +942,8 @@ textarea:focus {
 .incident-list,
 .mini-list,
 .chat-thread,
-.document-admin-list {
+.document-admin-list,
+.incident-detail {
     min-height: 120px;
     max-height: 360px;
     overflow: auto;
@@ -980,6 +981,102 @@ textarea:focus {
 .incident-item.active {
     border-color: rgba(45, 226, 197, 0.58);
     background: rgba(45, 226, 197, 0.09);
+}
+
+.incident-detail {
+    display: grid;
+    gap: 14px;
+}
+
+.detail-grid,
+.system-grid {
+    display: grid;
+    gap: 12px;
+}
+
+.detail-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.detail-grid > div,
+.system-tile,
+.timeline-item {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: rgba(255, 255, 255, 0.055);
+}
+
+.detail-grid > div {
+    display: grid;
+    gap: 6px;
+    padding: 12px;
+}
+
+.detail-grid strong {
+    font-size: 0.96rem;
+}
+
+.timeline {
+    display: grid;
+    gap: 10px;
+}
+
+.timeline-item {
+    position: relative;
+    display: grid;
+    gap: 6px;
+    padding: 13px 13px 13px 16px;
+}
+
+.timeline-item::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 12px;
+    bottom: 12px;
+    width: 2px;
+    background: linear-gradient(180deg, var(--teal), var(--amber));
+}
+
+.timeline-item span,
+.timeline-item p,
+.system-tile small {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.5;
+    font-size: 0.9rem;
+}
+
+.system-status {
+    display: grid;
+    gap: 14px;
+}
+
+.system-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.system-tile {
+    display: grid;
+    gap: 6px;
+    padding: 14px;
+}
+
+.system-tile span {
+    color: var(--muted);
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.system-tile.ready {
+    border-color: rgba(45, 226, 197, 0.34);
+    background: rgba(45, 226, 197, 0.08);
+}
+
+.system-tile.warning {
+    border-color: rgba(255, 123, 114, 0.34);
+    background: rgba(255, 123, 114, 0.08);
 }
 
 .document-item button,
@@ -1209,7 +1306,9 @@ textarea:focus {
     .hero-mini-rail,
     .form-row,
     .collaborator-grid,
-    .toggle-row {
+    .toggle-row,
+    .detail-grid,
+    .system-grid {
         grid-template-columns: 1fr;
     }
 
