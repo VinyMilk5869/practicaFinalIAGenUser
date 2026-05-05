@@ -11,8 +11,9 @@ from .config import UPLOAD_DIR, settings
 from .database import db
 
 try:
-    from openai import OpenAI
+    from openai import AzureOpenAI, OpenAI
 except ImportError:  # pragma: no cover
+    AzureOpenAI = None  # type: ignore
     OpenAI = None  # type: ignore
 
 try:
@@ -120,6 +121,52 @@ class StorageService:
             except Exception as exc:  # pragma: no cover
                 raise RuntimeError(f"No se pudo eliminar el archivo de Azure Blob Storage: {exc}") from exc
         return False
+
+    def read(self, blob_name: str) -> bytes:
+        if blob_name.startswith("local/"):
+            target = self.local_dir / blob_name.removeprefix("local/")
+            if not target.exists():
+                raise FileNotFoundError(f"No existe el archivo local {blob_name}")
+            return target.read_bytes()
+
+        if self.client:
+            try:
+                self.ensure_container()
+                blob_client = self.client.get_blob_client(container=settings.blob_container_name, blob=blob_name)
+                return blob_client.download_blob().readall()
+            except Exception as exc:  # pragma: no cover
+                raise RuntimeError(f"No se pudo descargar el archivo desde Azure Blob Storage: {exc}") from exc
+
+        if self.azure_required:
+            raise RuntimeError("Azure Blob Storage esta configurado, pero el cliente no esta disponible.")
+
+        raise FileNotFoundError(f"No existe el blob {blob_name}")
+
+    def list_blobs(self) -> list[dict[str, Any]]:
+        if self.client:
+            try:
+                self.ensure_container()
+                container = self.client.get_container_client(settings.blob_container_name)
+                return [
+                    {
+                        "name": blob.name,
+                        "size": getattr(blob, "size", 0) or 0,
+                        "content_type": getattr(getattr(blob, "content_settings", None), "content_type", None),
+                    }
+                    for blob in container.list_blobs()
+                ]
+            except Exception as exc:  # pragma: no cover
+                raise RuntimeError(f"No se pudo listar Azure Blob Storage: {exc}") from exc
+
+        return [
+            {
+                "name": f"local/{path.name}",
+                "size": path.stat().st_size,
+                "content_type": _guess_mime_type(path.name),
+            }
+            for path in sorted(self.local_dir.iterdir())
+            if path.is_file()
+        ]
 
     def status(self) -> dict[str, Any]:
         return {
@@ -260,12 +307,12 @@ class SearchService:
                     {"filename": item["filename"], "content": item["content"], "score": item.get("@search.score", 1)}
                     for item in results
                 ]
-            except Exception as exc:  # pragma: no cover
-                raise RuntimeError(f"No se pudo consultar Azure AI Search: {exc}") from exc
+            except Exception:  # pragma: no cover
+                return self._local_search(query, limit=limit)
 
-        if self.azure_required:
-            raise RuntimeError("Azure AI Search esta configurado, pero el cliente no esta disponible.")
+        return self._local_search(query, limit=limit)
 
+    def _local_search(self, query: str, limit: int = 4) -> list[dict[str, Any]]:
         words = [w for w in re.findall(r"\w+", query.lower()) if len(w) > 2]
         docs = db.fetchall(
             """
@@ -292,15 +339,27 @@ class SearchService:
             ORDER BY id ASC
             """
         )
+        reindexed = 0
+        errors: list[str] = []
         for doc in docs:
-            self.index_document(
-                int(doc["id"]),
-                doc["filename"],
-                doc["content_text"],
-                doc["source_kind"],
-                is_active=bool(doc["is_active"]),
-            )
-        return {"reindexed": len(docs), "index": settings.azure_search_index}
+            try:
+                self.index_document(
+                    int(doc["id"]),
+                    doc["filename"],
+                    doc["content_text"],
+                    doc["source_kind"],
+                    is_active=bool(doc["is_active"]),
+                )
+                reindexed += 1
+            except Exception as exc:  # noqa: BLE001
+                errors.append(f"No se pudo reindexar el documento {doc['id']}: {exc}")
+        return {
+            "reindexed": reindexed,
+            "attempted": len(docs),
+            "failed": len(errors),
+            "errors": errors,
+            "index": settings.azure_search_index,
+        }
 
     def status(self) -> dict[str, Any]:
         return {
@@ -321,7 +380,21 @@ class ChatResult:
 class ClaimAgentService:
     def __init__(self, search_service: SearchService) -> None:
         self.search_service = search_service
-        self.client = OpenAI(api_key=settings.openai_api_key) if OpenAI and settings.openai_api_key else None
+        self.client = None
+        self.provider = ""
+        self.model = ""
+        if AzureOpenAI and settings.has_azure_openai_chat:
+            self.client = AzureOpenAI(
+                azure_endpoint=settings.azure_openai_endpoint,
+                api_key=settings.azure_openai_api_key,
+                api_version=settings.azure_openai_api_version,
+            )
+            self.provider = "azure_openai"
+            self.model = settings.azure_openai_chat_deployment
+        elif OpenAI and settings.openai_api_key:
+            self.client = OpenAI(api_key=settings.openai_api_key)
+            self.provider = "openai"
+            self.model = settings.openai_model
 
     def build_context(self, summary: str) -> list[dict[str, Any]]:
         return self.search_service.search(summary, limit=3)
@@ -334,12 +407,18 @@ class ClaimAgentService:
         if self.client:
             try:
                 prompt = self._prompt(incident, user_message, context_docs, estimated_compensation)
-                response = self.client.responses.create(
-                    model=settings.openai_model,
-                    input=prompt,
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "Eres un agente experto en reclamaciones aereas. Responde siempre en espanol.",
+                        },
+                        {"role": "user", "content": prompt},
+                    ],
                     temperature=0.2,
                 )
-                text = getattr(response, "output_text", "").strip()
+                text = (response.choices[0].message.content or "").strip()
                 if text:
                     return ChatResult(answer=text, citations=citations, estimated_compensation=estimated_compensation)
             except Exception:  # pragma: no cover

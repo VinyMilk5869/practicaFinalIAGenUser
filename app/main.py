@@ -320,6 +320,68 @@ def get_incident(incident_id: int, user: dict = Depends(current_user)) -> dict:
     return {"incident": incident, "classification_logs": logs, "messages": messages}
 
 
+@app.patch("/api/incidents/{incident_id}")
+async def update_incident(
+    incident_id: int,
+    payload: dict = Body(...),
+    user: dict = Depends(current_user),
+) -> dict:
+    incident = db.fetchone(
+        """
+        SELECT id, user_id, flight_number, airline, category, status, summary, claim_amount, created_at
+        FROM incidents WHERE id = ?
+        """,
+        (incident_id,),
+    )
+    if not incident or incident["user_id"] != user["id"]:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    next_flight_number = (payload.get("flight_number") or incident["flight_number"]).strip()
+    next_airline = (payload.get("airline") or incident["airline"]).strip()
+    next_summary = (payload.get("summary") or incident["summary"]).strip()
+    if not next_flight_number or not next_airline or not next_summary:
+        raise HTTPException(status_code=400, detail="Flight, airline and summary are required")
+
+    summary_changed = next_summary != incident["summary"]
+    next_category = incident["category"]
+    next_status = incident["status"]
+    next_claim_amount = float(incident.get("claim_amount") or 0)
+
+    if summary_changed:
+        next_category, confidence, notes = classify_incident(next_summary)
+        next_status = "Pendiente de estimacion"
+        next_claim_amount = 0.0
+        db.execute_no_return(
+            """
+            INSERT INTO classified_incident_logs (incident_id, category, confidence, notes, created_at)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (incident_id, next_category, confidence, f"Reclasificacion por edicion manual. {notes}", db.now_iso()),
+        )
+
+    db.execute_no_return(
+        """
+        UPDATE incidents
+        SET flight_number = ?, airline = ?, category = ?, status = ?, summary = ?, claim_amount = ?
+        WHERE id = ?
+        """,
+        (next_flight_number, next_airline, next_category, next_status, next_summary, next_claim_amount, incident_id),
+    )
+    return get_incident(incident_id, user)
+
+
+@app.delete("/api/incidents/{incident_id}")
+def delete_incident(incident_id: int, user: dict = Depends(current_user)) -> dict:
+    incident = db.fetchone("SELECT id, user_id FROM incidents WHERE id = ?", (incident_id,))
+    if not incident or incident["user_id"] != user["id"]:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    db.execute_no_return("DELETE FROM chat_messages WHERE incident_id = ?", (incident_id,))
+    db.execute_no_return("DELETE FROM classified_incident_logs WHERE incident_id = ?", (incident_id,))
+    db.execute_no_return("DELETE FROM incidents WHERE id = ?", (incident_id,))
+    return {"deleted": True, "incident_id": incident_id}
+
+
 @app.get("/api/incidents/{incident_id}/messages")
 def list_messages(incident_id: int, user: dict = Depends(current_user)) -> dict:
     incident = db.fetchone("SELECT id, user_id FROM incidents WHERE id = ?", (incident_id,))
@@ -385,6 +447,12 @@ def admin_system_status(admin: dict = Depends(admin_user)) -> dict:
         "blob": storage_service.status(),
         "ocr": ocr_service.status(),
         "search": search_service.status(),
+        "agent": {
+            "provider": claim_agent_service.provider or "fallback",
+            "model": claim_agent_service.model or "local_fallback",
+            "azure_endpoint_configured": bool(settings.azure_openai_endpoint),
+            "embedding_deployment": settings.azure_openai_embedding_deployment or settings.openai_embedding_model,
+        },
         "counts": {
             "users": int(users["total"]),
             "incidents": int(incidents["total"]),

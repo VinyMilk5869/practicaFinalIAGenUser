@@ -44,144 +44,100 @@
                 {% endif %}
             </nav>
             <div class="nav-actions">
+                <div class="nav-user-pill">
+                    <strong id="portal-user-name">{{ current_user.full_name }}</strong>
+                    <span>{{ current_user.email }} · {{ current_user.role }}</span>
+                </div>
                 <button class="ghost-btn" id="logout-btn">Salir</button>
             </div>
         </header>
 
         <main>
-            <section class="portal-hero" data-reveal>
-                <div>
-                    <span class="eyebrow">{{ 'Consola admin' if page_mode == 'admin' else 'Portal privado' }}</span>
-                    <h1>{{ 'Entrena y supervisa la base documental del agente.' if page_mode == 'admin' else 'Gestiona tus incidencias y conversa con el agente.' }}</h1>
-                    <p>
-                        {% if page_mode == 'admin' %}
-                        Carga documentos, OCRiza, indexa y deja la memoria del sistema lista para responder mejor.
-                        {% else %}
-                        Crea expedientes, revisa el estado de cada caso y obtiene apoyo del agente en tiempo real.
-                        {% endif %}
-                    </p>
-                    <div class="portal-quicknav" aria-label="Navegacion de trabajo">
-                        {% if page_mode == 'admin' %}
-                        <a href="#docs-form">Subir documentos</a>
-                        <a href="#system-sync-panel">Sincronizacion</a>
-                        <a href="#docs-list">Base documental</a>
-                        <a href="#doc-detail-form">Control</a>
-                        {% else %}
-                        <a href="#incident-form">Nueva incidencia</a>
-                        <a href="#incidents-list">Incidencias</a>
-                        <a href="#incident-detail">Historial</a>
-                        <a href="#chat-thread">Agente</a>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="panel-note">
-                    <strong id="portal-user-name">{{ current_user.full_name }}</strong>
-                    <span id="portal-user-email">{{ current_user.email }}</span>
-                    <span id="portal-user-role">{{ current_user.role }}</span>
-                </div>
-            </section>
-
             {% if page_mode == 'user' %}
-            <section class="dashboard-section">
-                <div class="dashboard-grid">
-                    <aside class="dashboard-panel profile-panel" data-reveal>
-                        <div class="panel-header">
-                            <h3>Cuenta</h3>
-                        </div>
-                        <div id="user-card" class="user-card"></div>
-                        <div class="panel-note">
-                            <strong>Acceso protegido:</strong>
-                            <span>Esta ruta existe solo para usuarios autenticados.</span>
-                        </div>
-                    </aside>
-
-                    <section class="dashboard-panel" data-reveal>
-                        <div class="panel-header">
-                            <h3>Nueva incidencia</h3>
-                        </div>
-                        <form id="incident-form" class="stack-form">
-                            <div class="form-row">
-                                <label>
-                                    <span>Vuelo</span>
-                                    <input name="flight_number" placeholder="IB3166" required>
-                                </label>
-                                <label>
-                                    <span>Aerolínea</span>
-                                    <input name="airline" placeholder="Iberia" required>
-                                </label>
-                            </div>
-                            <label>
-                                <span>Resumen del incidente</span>
-                                <textarea name="summary" rows="4" placeholder="Describe retraso, cancelación o problema de equipaje" required></textarea>
-                            </label>
-                            <button class="primary-btn" type="submit">Crear expediente</button>
-                        </form>
-                        <div class="panel-note">
-                            <strong>Compensacion:</strong>
-                            <span>No la introduce el usuario. El agente la estima durante la conversacion y actualiza el expediente.</span>
-                        </div>
-                    </section>
-
-                    <section class="dashboard-panel span-two" data-reveal>
+            <section class="dashboard-section user-workspace">
+                <div class="user-dashboard-grid">
+                    <section class="dashboard-panel incidents-column" data-reveal>
                         <div class="panel-header">
                             <h3>Incidencias</h3>
+                            <div class="panel-header-actions">
+                                <span id="incident-list-count">Mis casos</span>
+                                <button class="ghost-btn" type="button" id="new-incident-btn">Nueva</button>
+                            </div>
                         </div>
+                        <details class="new-incident-dropdown" id="incident-editor-panel">
+                            <summary id="incident-editor-summary">Nueva incidencia</summary>
+                            <form id="incident-form" class="stack-form incident-editor">
+                                <input type="hidden" id="incident-id" name="incident_id">
+                                <label>
+                                    <span>Vuelo</span>
+                                    <input id="incident-flight-number" name="flight_number" placeholder="IB3166" required>
+                                </label>
+                                <label>
+                                    <span>Aerolinea</span>
+                                    <input id="incident-airline" name="airline" placeholder="Iberia" required>
+                                </label>
+                                <label>
+                                    <span>Resumen del incidente</span>
+                                    <textarea id="incident-summary" name="summary" rows="4" placeholder="Describe retraso, cancelacion o problema de equipaje" required></textarea>
+                                </label>
+                                <div class="incident-editor-actions">
+                                    <button class="primary-btn" type="submit" id="incident-save-btn">Crear expediente</button>
+                                    <button class="ghost-btn" type="button" id="incident-reset-btn">Limpiar</button>
+                                    <button class="ghost-btn danger-btn" type="button" id="delete-incident-btn" disabled>Eliminar</button>
+                                </div>
+                            </form>
+                            <div class="panel-note">
+                                <strong>Compensacion:</strong>
+                                <span>La estima el agente durante el chat y se guarda en el expediente.</span>
+                            </div>
+                        </details>
                         <div id="incidents-list" class="incident-list"></div>
                     </section>
 
-                    <section class="dashboard-panel span-two" data-reveal>
-                        <div class="panel-header">
-                            <h3>Detalle e historial</h3>
-                            <span id="incident-detail-context">Selecciona una incidencia</span>
-                        </div>
-                        <div id="incident-detail" class="incident-detail"></div>
-                    </section>
-
-                    <section class="dashboard-panel span-two" data-reveal>
-                        <div class="panel-header">
-                            <h3>Chat del agente</h3>
+                    <section class="dashboard-panel workspace-tabs-column" data-reveal>
+                        <div class="tabs-header">
+                            <div class="tab-buttons" role="tablist" aria-label="Trabajo de incidencia">
+                                <button class="segment-btn active" type="button" data-workspace-tab="chat">Chat del agente</button>
+                                <button class="segment-btn" type="button" data-workspace-tab="detail">Detalles e historial</button>
+                            </div>
                             <span id="chat-context">Selecciona una incidencia</span>
                         </div>
-                        <div id="chat-thread" class="chat-thread"></div>
-                        <form id="chat-form" class="chat-form">
-                            <textarea name="message" rows="3" placeholder="Pide al agente un borrador, checklist o siguiente paso" required></textarea>
-                            <button class="primary-btn" type="submit">Enviar al agente</button>
-                        </form>
+
+                        <div class="tab-panel active" data-workspace-panel="chat">
+                            <div id="chat-thread" class="chat-thread"></div>
+                            <form id="chat-form" class="chat-form">
+                                <textarea name="message" rows="3" placeholder="Pide al agente un borrador, checklist o siguiente paso" required></textarea>
+                                <button class="primary-btn" type="submit">Enviar al agente</button>
+                            </form>
+                        </div>
+
+                        <div class="tab-panel" data-workspace-panel="detail">
+                            <div class="panel-header compact">
+                                <h3>Detalle e historial</h3>
+                                <span id="incident-detail-context">Selecciona una incidencia</span>
+                            </div>
+                            <div id="incident-detail" class="incident-detail"></div>
+                        </div>
                     </section>
                 </div>
             </section>
             {% else %}
-            <section class="dashboard-section">
-                <div class="dashboard-grid">
-                    <aside class="dashboard-panel profile-panel" data-reveal>
-                        <div class="panel-header">
-                            <h3>Administrador</h3>
+            <section class="dashboard-section admin-workspace">
+                <section class="dashboard-panel admin-tabs-shell" data-reveal>
+                    <div class="tabs-header">
+                        <div class="tab-buttons admin-tab-buttons" role="tablist" aria-label="Panel administrador">
+                            <button class="segment-btn active" type="button" data-admin-tab="summary">Resumen del sistema</button>
+                            <button class="segment-btn" type="button" data-admin-tab="documents">Base documental indexada</button>
+                            <button class="segment-btn" type="button" data-admin-tab="sync">Sincronizacion Azure</button>
+                            <button class="segment-btn" type="button" data-admin-tab="upload">Documentos para el modelo</button>
                         </div>
-                        <div id="user-card" class="user-card"></div>
-                        <div class="panel-note">
-                            <strong>Ruta admin:</strong>
-                            <span>Solo accesible para usuarios con rol administrativo.</span>
-                        </div>
-                    </aside>
+                    </div>
 
-                    <section class="dashboard-panel" data-reveal>
-                        <div class="panel-header">
-                            <h3>Documentos para el modelo</h3>
-                        </div>
-                        <form id="docs-form" class="stack-form">
-                            <label class="file-drop">
-                                <input id="docs-input" name="files" type="file" multiple>
-                                <span>Selecciona documentos para OCR e indexación del RAG</span>
-                            </label>
-                            <button class="primary-btn" type="submit">Ingresar al modelo</button>
-                        </form>
-                    </section>
-
-                    <section class="dashboard-panel" data-reveal>
+                    <div class="tab-panel active" data-admin-panel="summary">
                         <div class="panel-header">
                             <h3>Resumen del sistema</h3>
                         </div>
-                        <div class="stats-grid portal-stats" id="stats-grid">
+                        <div class="stats-grid portal-stats admin-summary-grid" id="stats-grid">
                             <article class="stat-card">
                                 <span>Usuarios</span>
                                 <strong data-stat="users">--</strong>
@@ -195,61 +151,77 @@
                                 <strong data-stat="knowledge_docs">--</strong>
                             </article>
                             <article class="stat-card">
-                                <span>Tasa de éxito</span>
+                                <span>Tasa de exito</span>
                                 <strong data-stat="success_rate">--</strong>
                             </article>
                         </div>
-                    </section>
+                    </div>
 
-                    <section class="dashboard-panel span-two" id="system-sync-panel" data-reveal>
+                    <div class="tab-panel" data-admin-panel="documents">
+                        <div class="admin-docs-layout">
+                            <section>
+                                <div class="panel-header">
+                                    <h3>Base documental indexada</h3>
+                                </div>
+                                <div id="docs-list" class="document-admin-list"></div>
+                            </section>
+                            <section>
+                                <div class="panel-header">
+                                    <h3>Control del documento</h3>
+                                </div>
+                                <form id="doc-detail-form" class="stack-form">
+                                    <input type="hidden" id="doc-id" name="doc_id">
+                                    <label>
+                                        <span>Nombre visible</span>
+                                        <input id="doc-filename" name="filename" placeholder="Selecciona un documento">
+                                    </label>
+                                    <label>
+                                        <span>Origen</span>
+                                        <input id="doc-source-kind" name="source_kind" placeholder="admin_upload">
+                                    </label>
+                                    <div class="toggle-row">
+                                        <label class="toggle-item">
+                                            <span>Disponible para el RAG</span>
+                                            <input id="doc-active" name="is_active" type="checkbox">
+                                        </label>
+                                        <label class="toggle-item">
+                                            <span>Indexado en busqueda</span>
+                                            <input id="doc-indexed" name="indexed" type="checkbox">
+                                        </label>
+                                    </div>
+                                    <div id="doc-meta" class="panel-note">
+                                        <span>Selecciona un documento para ver tamano, blob y extracto.</span>
+                                    </div>
+                                    <div class="admin-actions">
+                                        <button class="primary-btn" type="submit">Guardar cambios</button>
+                                        <button class="ghost-btn danger-btn" type="button" id="delete-doc-btn">Eliminar archivo</button>
+                                    </div>
+                                </form>
+                            </section>
+                        </div>
+                    </div>
+
+                    <div class="tab-panel" id="system-sync-panel" data-admin-panel="sync">
                         <div class="panel-header">
                             <h3>Sincronizacion Azure</h3>
                             <button class="primary-btn" type="button" id="sync-system-btn">Sincronizar RAG e indices</button>
                         </div>
                         <div id="system-status" class="system-status"></div>
-                    </section>
+                    </div>
 
-                    <section class="dashboard-panel span-two" data-reveal>
+                    <div class="tab-panel" data-admin-panel="upload">
                         <div class="panel-header">
-                            <h3>Base documental indexada</h3>
+                            <h3>Documentos para el modelo</h3>
                         </div>
-                        <div id="docs-list" class="document-admin-list"></div>
-                    </section>
-
-                    <section class="dashboard-panel span-two" data-reveal>
-                        <div class="panel-header">
-                            <h3>Control del documento</h3>
-                        </div>
-                        <form id="doc-detail-form" class="stack-form">
-                            <input type="hidden" id="doc-id" name="doc_id">
-                            <label>
-                                <span>Nombre visible</span>
-                                <input id="doc-filename" name="filename" placeholder="Selecciona un documento">
+                        <form id="docs-form" class="stack-form admin-upload-form">
+                            <label class="file-drop">
+                                <input id="docs-input" name="files" type="file" multiple>
+                                <span>Selecciona documentos para OCR e indexacion del RAG</span>
                             </label>
-                            <label>
-                                <span>Origen</span>
-                                <input id="doc-source-kind" name="source_kind" placeholder="admin_upload">
-                            </label>
-                            <div class="toggle-row">
-                                <label class="toggle-item">
-                                    <span>Disponible para el RAG</span>
-                                    <input id="doc-active" name="is_active" type="checkbox">
-                                </label>
-                                <label class="toggle-item">
-                                    <span>Indexado en búsqueda</span>
-                                    <input id="doc-indexed" name="indexed" type="checkbox">
-                                </label>
-                            </div>
-                            <div id="doc-meta" class="panel-note">
-                                <span>Selecciona un documento para ver tamaño, blob y extracto.</span>
-                            </div>
-                            <div class="admin-actions">
-                                <button class="primary-btn" type="submit">Guardar cambios</button>
-                                <button class="ghost-btn danger-btn" type="button" id="delete-doc-btn">Eliminar archivo</button>
-                            </div>
+                            <button class="primary-btn" type="submit">Ingresar al modelo</button>
                         </form>
-                    </section>
-                </div>
+                    </div>
+                </section>
             </section>
             {% endif %}
         </main>

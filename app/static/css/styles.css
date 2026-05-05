@@ -311,6 +311,26 @@ button {
     gap: 10px;
 }
 
+.nav-user-pill {
+    display: grid;
+    gap: 2px;
+    min-width: 190px;
+    padding: 8px 12px;
+    border-left: 1px solid var(--border);
+}
+
+.nav-user-pill strong {
+    font-size: 0.92rem;
+}
+
+.nav-user-pill span {
+    color: var(--muted);
+    font-size: 0.78rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .primary-btn,
 .ghost-btn,
 .segment-btn {
@@ -755,7 +775,7 @@ button {
 .case-card,
 .collaborator-card,
 .dashboard-panel {
-    padding: 20px;
+    padding: 28px;
     transition: transform 220ms var(--ease), border-color 220ms ease, background 220ms ease;
 }
 
@@ -763,8 +783,9 @@ button {
 .case-card h3,
 .collaborator-card h3,
 .panel-header h3 {
-    margin: 0 0 8px;
+    margin: 16px 0 12px;
     font-size: 1.08rem;
+    line-height: 1.5;
 }
 
 .case-grid {
@@ -846,6 +867,154 @@ button {
     grid-template-columns: repeat(12, minmax(0, 1fr));
 }
 
+.user-workspace {
+    padding-top: 24px;
+}
+
+.admin-workspace {
+    padding-top: 24px;
+}
+
+.user-dashboard-grid {
+    display: grid;
+    grid-template-columns: minmax(360px, 420px) minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+}
+
+.incidents-column,
+.workspace-tabs-column {
+    min-height: calc(100vh - 132px);
+}
+
+.admin-tabs-shell {
+    min-height: calc(100vh - 132px);
+}
+
+.new-incident-dropdown {
+    margin-bottom: 24px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: rgba(255, 255, 255, 0.045);
+}
+
+.new-incident-dropdown summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 14px;
+    color: var(--muted-strong);
+    font-weight: 800;
+    list-style: none;
+    cursor: pointer;
+}
+
+.new-incident-dropdown summary::-webkit-details-marker {
+    display: none;
+}
+
+.new-incident-dropdown summary::after {
+    content: "+";
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--teal);
+}
+
+.new-incident-dropdown[open] summary::after {
+    content: "-";
+}
+
+.new-incident-dropdown .stack-form,
+.new-incident-dropdown .panel-note {
+    margin: 0 18px 18px;
+}
+
+.tabs-header {
+    display: grid;
+    gap: 18px;
+    margin-bottom: 30px;
+}
+
+.tabs-header > span {
+    color: var(--muted);
+    font-size: 0.92rem;
+}
+
+.tab-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.admin-tab-buttons {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.tab-panel {
+    display: none;
+}
+
+.tab-panel.active {
+    display: block;
+    padding-top: 4px;
+}
+
+.panel-header.compact {
+    margin-bottom: 22px;
+    padding-bottom: 14px;
+}
+
+.tab-panel > .panel-header:first-child {
+    margin-top: 18px;
+}
+
+.admin-docs-layout .panel-header {
+    margin-top: 18px;
+    margin-bottom: 28px;
+}
+
+.admin-docs-layout .panel-header > div {
+    display: grid;
+    gap: 6px;
+}
+
+.admin-docs-layout .panel-header > div span {
+    color: var(--muted);
+    font-size: 0.92rem;
+}
+
+.admin-docs-layout {
+    display: grid;
+    grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.1fr);
+    gap: 32px;
+    align-items: start;
+}
+
+.admin-docs-layout section {
+    padding-top: 14px;
+}
+
+.admin-summary-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.admin-upload-form {
+    max-width: 680px;
+}
+
+.inline-upload-form {
+    margin-bottom: 24px;
+}
+
+.admin-tabs-shell .document-admin-list {
+    max-height: calc(100vh - 286px);
+}
+
 .dashboard-panel {
     grid-column: span 4;
     background: var(--panel-strong);
@@ -859,8 +1028,25 @@ button {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 18px;
+    margin-bottom: 32px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.panel-header h3 {
+    max-width: 28ch;
+}
+
+.panel-header-actions {
+    display: flex;
+    align-items: center;
     gap: 12px;
-    margin-bottom: 18px;
+    flex-wrap: wrap;
+}
+
+.dashboard-panel > .panel-header:first-child {
+    margin-top: 10px;
 }
 
 .user-card,
@@ -883,6 +1069,16 @@ button {
 .chat-form {
     display: grid;
     gap: 14px;
+}
+
+.incident-editor {
+    margin-bottom: 24px;
+}
+
+.incident-editor-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
 }
 
 .form-row {
@@ -954,7 +1150,7 @@ textarea:focus {
 .incident-list,
 .document-admin-list {
     display: grid;
-    gap: 12px;
+    gap: 16px;
 }
 
 .incident-item,
@@ -986,6 +1182,17 @@ textarea:focus {
 .incident-detail {
     display: grid;
     gap: 14px;
+}
+
+.incidents-column .incident-list,
+.workspace-tabs-column .chat-thread,
+.workspace-tabs-column .incident-detail {
+    max-height: calc(100vh - 320px);
+}
+
+.workspace-tabs-column .chat-thread,
+.workspace-tabs-column .incident-detail {
+    min-height: calc(100vh - 360px);
 }
 
 .detail-grid,
@@ -1053,7 +1260,7 @@ textarea:focus {
 }
 
 .system-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .system-tile {
@@ -1163,7 +1370,7 @@ textarea:focus {
 }
 
 .chat-form {
-    margin-top: 16px;
+    margin-top: 24px;
 }
 
 .auth-card {
@@ -1265,13 +1472,21 @@ textarea:focus {
     .stats-grid,
     .services-grid,
     .case-grid,
-    .dashboard-grid {
+    .dashboard-grid,
+    .admin-docs-layout,
+    .admin-summary-grid {
         grid-template-columns: 1fr;
     }
 
     .dashboard-panel,
     .dashboard-panel.span-two {
         grid-column: span 1;
+    }
+
+    .incidents-column,
+    .workspace-tabs-column,
+    .admin-tabs-shell {
+        min-height: auto;
     }
 
     .portal-hero {
@@ -1283,6 +1498,17 @@ textarea:focus {
     .login-copy h1,
     .portal-hero h1 {
         max-width: 100%;
+    }
+}
+
+@media (max-width: 980px) {
+    .user-dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .incidents-column,
+    .workspace-tabs-column {
+        min-height: auto;
     }
 }
 
@@ -1298,6 +1524,13 @@ textarea:focus {
         justify-content: flex-start;
     }
 
+    .nav-user-pill {
+        min-width: 0;
+        flex: 1 1 220px;
+        border-left: 0;
+        padding-left: 0;
+    }
+
     .hero-section {
         min-height: auto;
         padding-top: 30px;
@@ -1308,7 +1541,8 @@ textarea:focus {
     .collaborator-grid,
     .toggle-row,
     .detail-grid,
-    .system-grid {
+    .system-grid,
+    .admin-tab-buttons {
         grid-template-columns: 1fr;
     }
 

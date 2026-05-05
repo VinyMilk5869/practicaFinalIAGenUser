@@ -28,19 +28,33 @@ class Settings:
     sqlserver_connection_string: str = os.getenv("SQLSERVER_CONNECTION_STRING", "")
     sqlite_path: str = os.getenv("SQLITE_PATH", str(DB_PATH))
     blob_connection_string: str = os.getenv("AZURE_STORAGE_CONNECTION_STRING", "")
+    blob_account_name: str = os.getenv("AZURE_STORAGE_ACCOUNT_NAME", "")
+    blob_account_key: str = os.getenv("AZURE_STORAGE_KEY", "")
     blob_container_name: str = os.getenv("AZURE_BLOB_CONTAINER", "training-documents")
     azure_search_endpoint: str = os.getenv("AZURE_SEARCH_ENDPOINT", "")
     azure_search_key: str = os.getenv("AZURE_SEARCH_KEY", "")
     azure_search_index: str = os.getenv("AZURE_SEARCH_INDEX", "airclaim-knowledge")
     azure_ocr_endpoint: str = os.getenv("AZURE_OCR_ENDPOINT", "")
     azure_ocr_key: str = os.getenv("AZURE_OCR_KEY", "")
+    azure_ocr_region: str = os.getenv("AZURE_OCR_REGION", "")
     openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
     openai_model: str = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
     openai_embedding_model: str = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
+    azure_openai_endpoint: str = os.getenv("AZURE_OPENAI_ENDPOINT", "")
+    azure_openai_api_key: str = os.getenv("AZURE_OPENAI_API_KEY", "")
+    azure_openai_api_version: str = os.getenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
+    azure_openai_chat_deployment: str = os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT", "")
+    azure_openai_chat_target_uri: str = os.getenv("AZURE_OPENAI_CHAT_TARGET_URI", "")
+    azure_openai_embedding_deployment: str = os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT", "")
+    azure_openai_embedding_target_uri: str = os.getenv("AZURE_OPENAI_EMBEDDING_TARGET_URI", "")
 
     @property
     def is_sqlserver(self) -> bool:
         return self.database_backend.lower() == "sqlserver" and bool(self.sqlserver_connection_string)
+
+    @property
+    def has_azure_openai_chat(self) -> bool:
+        return bool(self.azure_openai_endpoint and self.azure_openai_api_key and self.azure_openai_chat_deployment)
 
 
 settings = Settings()

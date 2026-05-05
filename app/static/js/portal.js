@@ -1,11 +1,24 @@
 const pageMode = document.body.dataset.page;
 const userCard = document.getElementById("user-card");
 const incidentsList = document.getElementById("incidents-list");
+const incidentListCount = document.getElementById("incident-list-count");
+const incidentEditorPanel = document.getElementById("incident-editor-panel");
+const incidentEditorSummary = document.getElementById("incident-editor-summary");
+const incidentForm = document.getElementById("incident-form");
+const incidentIdInput = document.getElementById("incident-id");
+const incidentFlightNumberInput = document.getElementById("incident-flight-number");
+const incidentAirlineInput = document.getElementById("incident-airline");
+const incidentSummaryInput = document.getElementById("incident-summary");
+const incidentSaveBtn = document.getElementById("incident-save-btn");
+const incidentResetBtn = document.getElementById("incident-reset-btn");
+const newIncidentBtn = document.getElementById("new-incident-btn");
+const deleteIncidentBtn = document.getElementById("delete-incident-btn");
 const incidentDetail = document.getElementById("incident-detail");
 const incidentDetailContext = document.getElementById("incident-detail-context");
 const chatThread = document.getElementById("chat-thread");
 const chatContext = document.getElementById("chat-context");
 const docsList = document.getElementById("docs-list");
+const docsListCount = document.getElementById("docs-list-count");
 const systemStatus = document.getElementById("system-status");
 const toast = document.getElementById("toast");
 const scrollPlane = document.getElementById("scroll-plane");
@@ -85,6 +98,9 @@ function updateUserCard() {
 
 function renderIncidents() {
     if (!incidentsList) return;
+    if (incidentListCount) {
+        incidentListCount.textContent = `${state.incidents.length} caso(s)`;
+    }
     if (!state.incidents.length) {
         incidentsList.innerHTML = '<div class="empty-state">No hay incidencias todavía. Crea la primera y seguimos.</div>';
         renderIncidentDetail(null);
@@ -104,6 +120,49 @@ function renderIncidents() {
         .join("");
     incidentsList.querySelectorAll("[data-incident-id]").forEach((button) => {
         button.addEventListener("click", () => selectIncident(Number(button.dataset.incidentId)));
+    });
+}
+
+function populateIncidentForm(item) {
+    if (!incidentForm) return;
+    if (!item) {
+        incidentForm.reset();
+        if (incidentIdInput) incidentIdInput.value = "";
+        if (incidentSaveBtn) incidentSaveBtn.textContent = "Crear expediente";
+        if (incidentEditorSummary) incidentEditorSummary.textContent = "Nueva incidencia";
+        if (deleteIncidentBtn) deleteIncidentBtn.disabled = true;
+        return;
+    }
+    if (incidentIdInput) incidentIdInput.value = item.id;
+    if (incidentFlightNumberInput) incidentFlightNumberInput.value = item.flight_number || "";
+    if (incidentAirlineInput) incidentAirlineInput.value = item.airline || "";
+    if (incidentSummaryInput) incidentSummaryInput.value = item.summary || "";
+    if (incidentSaveBtn) incidentSaveBtn.textContent = "Guardar cambios";
+    if (incidentEditorSummary) incidentEditorSummary.textContent = "Editar incidencia";
+    if (deleteIncidentBtn) deleteIncidentBtn.disabled = false;
+}
+
+function startNewIncidentDraft() {
+    populateIncidentForm(null);
+    if (incidentEditorPanel) incidentEditorPanel.open = true;
+    incidentFlightNumberInput?.focus();
+}
+
+function switchWorkspaceTab(tab) {
+    document.querySelectorAll("[data-workspace-tab]").forEach((button) => {
+        button.classList.toggle("active", button.dataset.workspaceTab === tab);
+    });
+    document.querySelectorAll("[data-workspace-panel]").forEach((panel) => {
+        panel.classList.toggle("active", panel.dataset.workspacePanel === tab);
+    });
+}
+
+function switchAdminTab(tab) {
+    document.querySelectorAll("[data-admin-tab]").forEach((button) => {
+        button.classList.toggle("active", button.dataset.adminTab === tab);
+    });
+    document.querySelectorAll("[data-admin-panel]").forEach((panel) => {
+        panel.classList.toggle("active", panel.dataset.adminPanel === tab);
     });
 }
 
@@ -201,7 +260,7 @@ function renderMessages(items = []) {
 function renderDocuments(items = []) {
     if (!docsList) return;
     if (!items.length) {
-        docsList.innerHTML = '<div class="empty-state">Todavía no hay documentos indexados.</div>';
+        docsList.innerHTML = '<div class="empty-state">Todavia no hay documentos indexados.</div>';
         populateDocumentForm(null);
         return;
     }
@@ -210,10 +269,10 @@ function renderDocuments(items = []) {
             <article class="document-item ${item.id === state.selectedDocumentId ? "active" : ""}">
                 <button type="button" data-document-id="${item.id}">
                     <strong>${item.filename}</strong>
-                    <div class="incident-meta">${item.source_kind || "admin_upload"} · ${item.created_at}</div>
+                    <div class="incident-meta">${item.source_kind || "admin_upload"} | ${formatDate(item.created_at)}</div>
                     <div class="document-badges">
                         <span>${item.is_active ? "Activo" : "Pausado"}</span>
-                        <span>${item.indexed ? "Indexado" : "Sin índice"}</span>
+                        <span>${item.indexed ? "Indexado" : "Sin indice"}</span>
                         <span>${formatBytes(item.file_size || 0)}</span>
                     </div>
                 </button>
@@ -238,12 +297,14 @@ function renderSystemStatus(payload) {
             ${systemTile("Blob", payload.blob?.container, payload.blob?.mode === "azure_blob")}
             ${systemTile("OCR", payload.ocr?.mode, payload.ocr?.mode === "azure_document_intelligence")}
             ${systemTile("RAG", payload.search?.index, payload.search?.mode === "azure_ai_search")}
+            ${systemTile("Agente", payload.agent?.model, payload.agent?.provider === "azure_openai")}
         </div>
         <div class="detail-grid">
             <div><span class="incident-meta">Documentos</span><strong>${counts.documents ?? "--"}</strong></div>
             <div><span class="incident-meta">Activos</span><strong>${counts.active_documents ?? "--"}</strong></div>
             <div><span class="incident-meta">Indexados</span><strong>${counts.indexed_documents ?? "--"}</strong></div>
             <div><span class="incident-meta">En Blob Azure</span><strong>${counts.azure_blob_documents ?? "--"}</strong></div>
+            <div><span class="incident-meta">Embeddings</span><strong>${payload.agent?.embedding_deployment || "--"}</strong></div>
         </div>
     `;
 }
@@ -273,7 +334,7 @@ function populateDocumentForm(item) {
         sourceKindInput.value = "";
         activeInput.checked = false;
         indexedInput.checked = false;
-        meta.innerHTML = "<span>Selecciona un documento para ver tamaño, blob y extracto.</span>";
+        meta.innerHTML = "<span>Selecciona un documento para ver tamano, blob y extracto.</span>";
         if (deleteDocBtn) deleteDocBtn.disabled = true;
         return;
     }
@@ -286,7 +347,7 @@ function populateDocumentForm(item) {
     meta.innerHTML = `
         <strong>Blob:</strong>
         <span>${item.blob_name}</span>
-        <span>MIME: ${item.mime_type || "application/octet-stream"} · Tamaño: ${formatBytes(item.file_size || 0)}</span>
+        <span>MIME: ${item.mime_type || "application/octet-stream"} | Tamano: ${formatBytes(item.file_size || 0)}</span>
         <span>Extracto: ${item.content_preview || "Sin extracto disponible."}</span>
     `;
     if (deleteDocBtn) deleteDocBtn.disabled = false;
@@ -325,12 +386,21 @@ async function restoreSession() {
 async function loadIncidents() {
     const response = await api("/api/incidents");
     state.incidents = response.items;
+    if (state.selectedIncidentId && !state.incidents.some((item) => item.id === state.selectedIncidentId)) {
+        state.selectedIncidentId = state.incidents[0]?.id || null;
+    }
     renderIncidents();
-    if (state.incidents.length && !state.selectedIncidentId) {
-        await selectIncident(state.incidents[0].id);
-    } else if (!state.incidents.length) {
+    if (state.selectedIncidentId) {
+        await selectIncident(state.selectedIncidentId);
+    } else if (state.incidents.length) {
+        state.selectedIncidentId = state.incidents[0].id;
+        await selectIncident(state.selectedIncidentId);
+    } else {
+        state.selectedIncidentId = null;
+        if (chatContext) chatContext.textContent = "Selecciona una incidencia";
         renderMessages();
         renderIncidentDetail(null);
+        populateIncidentForm(null);
     }
 }
 
@@ -338,7 +408,7 @@ async function selectIncident(incidentId) {
     state.selectedIncidentId = incidentId;
     const incident = state.incidents.find((item) => item.id === incidentId);
     if (chatContext) {
-        chatContext.textContent = incident ? `${incident.airline} · ${incident.flight_number}` : "Selecciona una incidencia";
+        chatContext.textContent = incident ? `${incident.airline} | ${incident.flight_number}` : "Selecciona una incidencia";
     }
     renderIncidents();
     const [detailResponse, messagesResponse] = await Promise.all([
@@ -348,6 +418,8 @@ async function selectIncident(incidentId) {
     state.selectedIncidentDetail = detailResponse;
     renderIncidentDetail(detailResponse);
     renderMessages(messagesResponse.items);
+    populateIncidentForm(detailResponse.incident);
+    if (incidentEditorPanel) incidentEditorPanel.open = true;
 }
 
 async function loadDocuments() {
@@ -355,6 +427,9 @@ async function loadDocuments() {
     state.documents = response.items;
     if (!state.selectedDocumentId && state.documents.length) {
         state.selectedDocumentId = state.documents[0].id;
+    }
+    if (state.selectedDocumentId && !state.documents.some((item) => item.id === state.selectedDocumentId)) {
+        state.selectedDocumentId = state.documents[0]?.id || null;
     }
     renderDocuments(state.documents);
     const selected = state.documents.find((item) => item.id === state.selectedDocumentId) || state.documents[0] || null;
@@ -379,12 +454,60 @@ document.getElementById("logout-btn")?.addEventListener("click", async () => {
     }
 });
 
-document.getElementById("incident-form")?.addEventListener("submit", async (event) => {
+document.querySelectorAll("[data-workspace-tab]").forEach((button) => {
+    button.addEventListener("click", () => switchWorkspaceTab(button.dataset.workspaceTab));
+});
+
+document.querySelectorAll("[data-admin-tab]").forEach((button) => {
+    button.addEventListener("click", () => switchAdminTab(button.dataset.adminTab));
+});
+
+incidentForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
     try {
-        const response = await api("/api/incidents", { method: "POST", body: new FormData(event.currentTarget) });
-        showToast(`Incidencia creada y clasificada como ${response.category}.`);
-        event.currentTarget.reset();
+        const currentId = incidentIdInput?.value?.trim();
+        const isEditing = Boolean(currentId);
+        const response = await api(
+            isEditing ? `/api/incidents/${currentId}` : "/api/incidents",
+            isEditing
+                ? {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                          flight_number: incidentFlightNumberInput?.value?.trim(),
+                          airline: incidentAirlineInput?.value?.trim(),
+                          summary: incidentSummaryInput?.value?.trim(),
+                      }),
+                  }
+                : { method: "POST", body: new FormData(event.currentTarget) },
+        );
+        state.selectedIncidentId = Number(isEditing ? currentId : response.id);
+        showToast(isEditing ? "Incidencia actualizada." : `Incidencia creada y clasificada como ${response.category}.`);
+        await loadIncidents();
+    } catch (error) {
+        showToast(error.message);
+    }
+});
+
+newIncidentBtn?.addEventListener("click", () => {
+    startNewIncidentDraft();
+});
+
+incidentResetBtn?.addEventListener("click", () => {
+    startNewIncidentDraft();
+});
+
+deleteIncidentBtn?.addEventListener("click", async () => {
+    const currentId = incidentIdInput?.value?.trim();
+    if (!currentId) {
+        showToast("Selecciona una incidencia antes de eliminar.");
+        return;
+    }
+    try {
+        await api(`/api/incidents/${currentId}`, { method: "DELETE" });
+        state.selectedIncidentId = null;
+        state.selectedIncidentDetail = null;
+        showToast("Incidencia eliminada.");
         await loadIncidents();
     } catch (error) {
         showToast(error.message);
@@ -416,10 +539,22 @@ document.getElementById("chat-form")?.addEventListener("submit", async (event) =
     }
 });
 
+document.getElementById("refresh-docs-btn")?.addEventListener("click", async () => {
+    try {
+        await Promise.all([loadDocuments(), loadStats(), loadSystemStatus()]);
+        showToast("Listado documental actualizado.");
+    } catch (error) {
+        showToast(error.message);
+    }
+});
+
 document.getElementById("sync-system-btn")?.addEventListener("click", async () => {
     try {
         const result = await api("/api/admin/system/sync", { method: "POST" });
-        showToast(`Sincronizacion completada: ${result.search.reindexed} documento(s) reindexado(s).`);
+        const attempted = result.search?.attempted ?? result.search?.reindexed ?? 0;
+        const failed = result.search?.failed ?? 0;
+        const warning = failed ? ` Search no disponible para ${failed}/${attempted}.` : "";
+        showToast(`Sincronizacion completada: ${result.search.reindexed} documento(s) reindexado(s).${warning}`);
         await Promise.all([loadSystemStatus(), loadStats(), loadDocuments()]);
     } catch (error) {
         showToast(error.message);
@@ -502,7 +637,7 @@ updateScrollScene();
 restoreSession()
     .then(() => {
         if (pageMode === "admin") {
-            return Promise.all([loadStats(), loadDocuments(), loadSystemStatus()]);
+            return loadDocuments().then(() => Promise.all([loadStats(), loadSystemStatus()]));
         }
         return loadIncidents();
     })
