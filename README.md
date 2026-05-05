@@ -104,3 +104,6 @@ Si no, el entorno de desarrollo usa `SQLite` local y deja todo funcionando.
 ## Nota de seguridad
 
 No he incrustado secretos reales en el codigo. Lo correcto es ponerlos en `.env` local y rotar las claves que se hayan compartido fuera de un canal seguro.
+
+
+
